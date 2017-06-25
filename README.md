@@ -28,8 +28,10 @@ const firebaseConfig = {
     messagingSenderId: '<your-sender-id>'
 };
 
+const trackedResources = ['posts']
+
 const App = () => (
-    <Admin restClient={RestClient(firebaseConfig)} >
+    <Admin restClient={RestClient(trackedResources, firebaseConfig)} >
         <Resource name="posts" list={PostList} />
     </Admin>
 );
@@ -39,7 +41,7 @@ export default App;
 
 ### Auth Client
 The package lets you manage the login/logout process implementing an optional `authClient` prop of the `Admin` component [(see documentation)](https://marmelab.com/admin-on-rest/Authentication.html).  
-It stores a `parseToken` in  `localStorage` and passes it at every request as a `X-Parse-Session-Token` header.  
+It stores a `firebaseToken` in  `localStorage`.  
 
 
 ```js
