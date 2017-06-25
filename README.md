@@ -1,0 +1,66 @@
+# aor-firebase-client
+
+An [admin-on-rest](https://github.com/marmelab/admin-on-rest) client for [Firebase](https://firebase.google.com).
+
+
+## Installation
+
+```sh
+npm install aor-firebase-client --save
+```
+
+## Usage
+
+
+### As a parameter of the `<Admin>` component
+```js
+// in src/App.js
+import React from 'react';
+import { Admin, Resource } from 'admin-on-rest';
+import { PostList } from './posts';
+import { RestClient } from 'aor-firebase-client';
+
+const firebaseConfig = {
+    apiKey: '<your-api-key>',
+    authDomain: '<your-auth-domain>',
+    databaseURL: '<your-database-url>',
+    storageBucket: '<your-storage-bucket>',
+    messagingSenderId: '<your-sender-id>'
+};
+
+const App = () => (
+    <Admin restClient={RestClient(firebaseConfig)} >
+        <Resource name="posts" list={PostList} />
+    </Admin>
+);
+
+export default App;
+```
+
+### Auth Client
+The package lets you manage the login/logout process implementing an optional `authClient` prop of the `Admin` component [(see documentation)](https://marmelab.com/admin-on-rest/Authentication.html).  
+It stores a `parseToken` in  `localStorage` and passes it at every request as a `X-Parse-Session-Token` header.  
+
+
+```js
+// in src/App.js
+...
+import {RestClient, AuthClient} from 'aor-firebase-client';
+
+const App = () => (
+    <Admin restClient={RestClient(firebaseConfig)} authClient={AuthClient(firebaseConfig)}>
+        <Resource name="posts" list={PostList} />
+    </Admin>
+);
+
+export default App;
+```
+
+## Changelog
+
+### v0.0.1
+  * Initial commit, lots of to dos
+
+## License
+
+This library is licensed under the [MIT Licence](LICENSE).
