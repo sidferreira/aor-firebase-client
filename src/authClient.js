@@ -9,11 +9,11 @@ function firebaseAuthCheck(auth, resolve, reject) {
       const profile = snapshot.val()
       //TODO make it a parameter
       if (profile.isAdmin) {
-        auth.getToken().then((accessToken) => {
-          let user = {auth, profile, accessToken}
+        auth.getToken().then((firebaseToken) => {
+          let user = {auth, profile, firebaseToken}
 
           //TODO improve this! Save it on redux or something
-          localStorage.setItem('accessToken', accessToken)
+          localStorage.setItem('firebaseToken', firebaseToken)
           resolve(user)
         })
         .catch(err => {
