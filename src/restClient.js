@@ -106,10 +106,10 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             return
 
           case UPDATE:
-            const data = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
+            const dataUpdate = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
 
             firebase.database().ref(params.basePath + '/' + params.id).update(updatedData)
-              .then(() => resolve({ data }))
+              .then(() => resolve({ data: dataUpdate }))
               .catch(reject)
             return
 
@@ -121,7 +121,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
               reject(new Error('ID already in use'))
               return
             }
-            const data = Object.assign(
+            const dataCreate = Object.assign(
               { 
                 created_at: Date.now(), 
                 updated_at: Date.now() 
@@ -132,8 +132,8 @@ export default (trackedResources = [], firebaseConfig = {}) => {
                 key: newItemKey 
               }
             )
-            firebase.database().ref(params.basePath + '/' + newItemKey).update(data)
-            .then(() => resolve({ data }))
+            firebase.database().ref(params.basePath + '/' + newItemKey).update(dataCreate)
+            .then(() => resolve({ data: dataCreate }))
             .catch(reject)
             return
 
