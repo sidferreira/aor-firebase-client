@@ -61,8 +61,8 @@ export default App;
 ## Changelog
 
 ### v0.0.3
-  * Fixed Auth Client configuration
-  * Added timestamps 
+  * Fixed Auth Client configuration ( Thanks to @RWOverdijk in #2 )
+  * Added timestamps ( Thanks to @BilalBudhani in #3 )
   * Initial unit testing / CI
 
 ### v0.0.1
