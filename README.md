@@ -2,6 +2,8 @@
 
 An [admin-on-rest](https://github.com/marmelab/admin-on-rest) client for [Firebase](https://firebase.google.com).
 
+Master: [![CircleCI](https://circleci.com/gh/sidferreira/aor-firebase-client/tree/master.svg?style=svg)](https://circleci.com/gh/sidferreira/aor-firebase-client/tree/master)
+Develop: [![CircleCI](https://circleci.com/gh/sidferreira/aor-firebase-client/tree/develop.svg?style=svg)](https://circleci.com/gh/sidferreira/aor-firebase-client/tree/develop)
 
 ## Installation
 
