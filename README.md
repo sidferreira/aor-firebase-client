@@ -51,6 +51,14 @@ It stores a `firebaseToken` in  `localStorage`.
 ...
 import {RestClient, AuthClient} from 'aor-firebase-client';
 
+const firebaseConfig = {
+    apiKey: '<your-api-key>',
+    authDomain: '<your-auth-domain>',
+    databaseURL: '<your-database-url>',
+    storageBucket: '<your-storage-bucket>',
+    messagingSenderId: '<your-sender-id>'
+};
+
 const App = () => (
     <Admin restClient={RestClient(firebaseConfig)} authClient={AuthClient}>
         <Resource name="posts" list={PostList} />
@@ -65,6 +73,14 @@ export default App;
 ```js
 import {RestClient, AuthClient} from 'aor-firebase-client';
 import firebase from 'firebase';
+
+const firebaseConfig = {
+    apiKey: '<your-api-key>',
+    authDomain: '<your-auth-domain>',
+    databaseURL: '<your-database-url>',
+    storageBucket: '<your-storage-bucket>',
+    messagingSenderId: '<your-sender-id>'
+};
 
 firebase.initializeApp(firebaseConfig);
 
