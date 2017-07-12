@@ -11,39 +11,36 @@ import {
 } from 'admin-on-rest'
 
 export default (trackedResources = [], firebaseConfig = {}) => {
-
   /** TODO Move this to the Redux Store */
   const resourcesStatus = {}
   const resourcesReferences = {}
   const resourcesData = {}
 
   if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig)
   }
 
   trackedResources.map(resource => {
+    resourcesData[resource] = {}
     resourcesStatus[resource] = new Promise(resolve => {
-      let ref = resourcesReferences[resource] = firebase.database().ref(resource);
-      resourcesData[resource] = {}
+      let ref = resourcesReferences[resource] = firebase.database().ref(resource)
 
-      ref.on('value', function(childSnapshot) {
+      ref.on('value', function (childSnapshot) {
         /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-        if (childSnapshot.key === resource)
-          resourcesData[resource] = childSnapshot.val()
-        Object.keys(resourcesData[resource]).map(key => resourcesData[resource][key].id = key)
-        ref.on('child_added', function(childSnapshot) {
+        if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() }
+        Object.keys(resourcesData[resource]).map(key => { resourcesData[resource][key].id = key })
+        ref.on('child_added', function (childSnapshot) {
           resourcesData[resource][childSnapshot.key] = childSnapshot.val()
           resourcesData[resource][childSnapshot.key].id = childSnapshot.key
-        });
-        ref.on('child_removed', function(oldChildSnapshot) {
-          if (resourcesData[resource][oldChildSnapshot.key])
-            delete resourcesData[resource][oldChildSnapshot.key]
-        });
-        ref.on('child_changed', function(childSnapshot) {
+        })
+        ref.on('child_removed', function (oldChildSnapshot) {
+          if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
+        })
+        ref.on('child_changed', function (childSnapshot) {
           resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-        });
-        resolve();
-      });
+        })
+        resolve()
+      })
     })
   })
 
@@ -75,7 +72,6 @@ export default (trackedResources = [], firebaseConfig = {}) => {
                   total++
                 }
               })
-
             } else if (params.pagination) {
               /** GET_LIST / GET_MANY_REFERENCE */
               const {page, perPage} = params.pagination
@@ -87,7 +83,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
               total = values.length
             } else {
               console.error('Unexpected parameters: ', params, type)
-              reject()
+              reject(new Error('Error processing request'))
             }
             resolve({ data, ids, total })
             return
@@ -99,7 +95,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
                 data: resourcesData[resource][key]
               })
             } else {
-              reject()
+              reject(new Error('Key not found'))
             }
             return
 
@@ -122,7 +118,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             return
 
           case CREATE:
-            const newItemKey = firebase.database().ref().child(params.basePath).push().key;
+            const newItemKey = firebase.database().ref().child(params.basePath).push().key
             const createdData = Object.assign({}, params.data, { id: newItemKey, key: newItemKey })
             firebase.database().ref(params.basePath + '/' + newItemKey).update(createdData)
             .then(() => {

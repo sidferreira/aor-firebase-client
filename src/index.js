@@ -1,7 +1,4 @@
-import RestClient from './restClient';
-import AuthClient from './authClient';
+import RestClient from './restClient'
+import AuthClient from './authClient'
 
-export {
-	RestClient,
-	AuthClient,
-}
+export { RestClient, AuthClient }

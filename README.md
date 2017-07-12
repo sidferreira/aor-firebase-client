@@ -50,7 +50,7 @@ It stores a `firebaseToken` in  `localStorage`.
 import {RestClient, AuthClient} from 'aor-firebase-client';
 
 const App = () => (
-    <Admin restClient={RestClient(firebaseConfig)} authClient={AuthClient(firebaseConfig)}>
+    <Admin restClient={RestClient(firebaseConfig)} authClient={AuthClient}>
         <Resource name="posts" list={PostList} />
     </Admin>
 );
@@ -59,6 +59,11 @@ export default App;
 ```
 
 ## Changelog
+
+### v0.0.3
+  * Fixed Auth Client configuration
+  * Added timestamps 
+  * Initial unit testing / CI
 
 ### v0.0.1
   * Initial commit, lots of to dos
