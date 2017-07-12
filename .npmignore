@@ -1,4 +1,8 @@
 node_modules
 package-lock.json
-firebase_env
 *.log
+
+demo
+tests
+__mocks__
+.circleci

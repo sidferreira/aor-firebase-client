@@ -9,7 +9,7 @@ function firebaseAuthCheck (auth, resolve, reject) {
     .then(function (snapshot) {
       const profile = snapshot.val()
       // TODO make it a parameter
-      if (profile.isAdmin) {
+      if (profile && profile.isAdmin) {
         auth.getToken().then((firebaseToken) => {
           let user = {auth, profile, firebaseToken}
 
@@ -52,7 +52,7 @@ export default (type, params) => {
     return new Promise((resolve, reject) => {
       firebase.auth().signInWithEmailAndPassword(username, password)
       .then(auth => firebaseAuthCheck(auth, resolve, reject))
-      .catch(err => reject(err))
+      .catch(() => new Error('User not found'))
     })
   }
   return Promise.resolve()
