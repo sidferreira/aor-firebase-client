@@ -1,18 +1,19 @@
+/* globals localStorage */
 import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest'
 import firebase from 'firebase'
 
-function firebaseAuthCheck(auth, resolve, reject) {
+function firebaseAuthCheck (auth, resolve, reject) {
   if (auth) {
-    //TODO make it a parameter
+    // TODO make it a parameter
     firebase.database().ref('/users/' + auth.uid).once('value')
     .then(function (snapshot) {
       const profile = snapshot.val()
-      //TODO make it a parameter
+      // TODO make it a parameter
       if (profile.isAdmin) {
         auth.getToken().then((firebaseToken) => {
           let user = {auth, profile, firebaseToken}
 
-          //TODO improve this! Save it on redux or something
+          // TODO improve this! Save it on redux or something
           localStorage.setItem('firebaseToken', firebaseToken)
           resolve(user)
         })
@@ -32,21 +33,21 @@ function firebaseAuthCheck(auth, resolve, reject) {
   }
 }
 
-export const authClient = (type, params) => {
+export default (type, params) => {
   if (type === AUTH_LOGOUT) {
-    return firebase.auth().signOut();
+    return firebase.auth().signOut()
   }
   if (type === AUTH_CHECK) {
     return new Promise((resolve, reject) => {
       if (firebase.auth().currentUser) {
         resolve()
       } else {
-        reject()
+        reject(new Error('User not found'))
       }
     })
   }
   if (type === AUTH_LOGIN) {
-    const { username, password } = params;
+    const { username, password } = params
 
     return new Promise((resolve, reject) => {
       firebase.auth().signInWithEmailAndPassword(username, password)
@@ -54,5 +55,5 @@ export const authClient = (type, params) => {
       .catch(err => reject(err))
     })
   }
-  return Promise.resolve();
+  return Promise.resolve()
 }
