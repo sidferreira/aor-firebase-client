@@ -24,7 +24,7 @@ export const PostList = (props) => (
 const trackedResources = ['posts']
 
 const App = () => (
-  <Admin restClient={RestClient(firebaseConfig)} authClient={AuthClient} >
+  <Admin restClient={RestClient(trackedResources, firebaseConfig)} authClient={AuthClient} >
     <Resource name="posts" list={PostList} />
   </Admin>
 );
