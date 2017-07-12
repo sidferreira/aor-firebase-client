@@ -96,6 +96,9 @@ export default App;
 
 ## Changelog
 
+### v0.0.6
+  * README Fixes ( Thanks to @RWOverdijk in #4 )
+
 ### v0.0.4
   * CI configured
 
