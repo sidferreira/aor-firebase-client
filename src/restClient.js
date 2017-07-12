@@ -106,31 +106,39 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             return
 
           case UPDATE:
-            console.log(type, params)
-            const updatedData = Object.assign({}, resourcesData[resource][params.id], params.data)
+            const data = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
+
             firebase.database().ref(params.basePath + '/' + params.id).update(updatedData)
-              .then(() => {
-                resolve({
-                  data: updatedData
-                })
-              })
+              .then(() => resolve({ data }))
               .catch(reject)
             return
 
           case CREATE:
-            const newItemKey = firebase.database().ref().child(params.basePath).push().key
-            const createdData = Object.assign({}, params.data, { id: newItemKey, key: newItemKey })
-            firebase.database().ref(params.basePath + '/' + newItemKey).update(createdData)
-            .then(() => {
-              resolve({
-                data: createdData
-              })
-            })
+            let newItemKey = params.data.id
+            if (!newItemKey) {
+              const newItemKey = firebase.database().ref().child(params.basePath).push().key;
+            } else if (resourcesData[resource] && resourcesData[resource][newItemKey]) {
+              reject(new Error('ID already in use'))
+              return
+            }
+            const data = Object.assign(
+              { 
+                created_at: Date.now(), 
+                updated_at: Date.now() 
+              }, 
+              params.data, 
+              { 
+                id: newItemKey, 
+                key: newItemKey 
+              }
+            )
+            firebase.database().ref(params.basePath + '/' + newItemKey).update(data)
+            .then(() => resolve({ data }))
             .catch(reject)
             return
 
           default:
-            console.log(type)
+            console.error('Undocumented method: ', type)
             return {data: []}
         }
       })
