@@ -131,7 +131,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
           case UPDATE:
             const dataUpdate = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
 
-            firebase.database().ref(params.basePath + '/' + params.id).update(updatedData)
+            firebase.database().ref(params.basePath + '/' + params.id).update(dataUpdate)
               .then(() => resolve({ data: dataUpdate }))
               .catch(reject)
             return
@@ -145,14 +145,14 @@ export default (trackedResources = [], firebaseConfig = {}) => {
               return
             }
             const dataCreate = Object.assign(
-              { 
-                created_at: Date.now(), 
-                updated_at: Date.now() 
-              }, 
-              params.data, 
-              { 
-                id: newItemKey, 
-                key: newItemKey 
+              {
+                created_at: Date.now(),
+                updated_at: Date.now()
+              },
+              params.data,
+              {
+                id: newItemKey,
+                key: newItemKey
               }
             )
             firebase.database().ref(params.basePath + '/' + newItemKey).update(dataCreate)
