@@ -96,15 +96,19 @@ export default App;
 
 ## Changelog
 
+### v0.0.8
+  * Fix it saving on the wrong path [#7](https://github.com/sidferreira/aor-firebase-client/issues/7)
+  * Fix README links
+### v0.0.7
+  * Typos, tests and fixes [#6](https://github.com/sidferreira/aor-firebase-client/pull/6)
 ### v0.0.6
-  * README Fixes ( Thanks to @RWOverdijk in #4 )
-
+  * README Fixes [#4](https://github.com/sidferreira/aor-firebase-client/pull/4)
 ### v0.0.4
   * CI configured
 
 ### v0.0.3
-  * Fixed Auth Client configuration ( Thanks to @RWOverdijk in #2 )
-  * Added timestamps ( Thanks to @BilalBudhani in #3 )
+  * Fixed Auth Client configuration [#2](https://github.com/sidferreira/aor-firebase-client/issues/2)
+  * Added timestamps [#3](https://github.com/sidferreira/aor-firebase-client/pull/3)
   * Initial unit testing / CI
 
 ### v0.0.1

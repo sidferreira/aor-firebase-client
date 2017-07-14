@@ -79,7 +79,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
               const filterKeys = Object.keys(params.filter || {})
               /* TODO Must have a better way */
               if (filterKeys.length) {
-                resourcesData[resource].map(value => {
+                Object.values(resourcesData[resource]).map(value => {
                   let filterIndex = 0
                   while(filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
@@ -123,7 +123,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             return
 
           case DELETE:
-            firebase.database().ref(params.basePath + '/' + params.id).remove()
+            firebase.database().ref(resource + '/' + params.id).remove()
             .then(() => { resolve({ data: params.id }) })
             .catch(reject)
             return
@@ -131,7 +131,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
           case UPDATE:
             const dataUpdate = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
 
-            firebase.database().ref(params.basePath + '/' + params.id).update(dataUpdate)
+            firebase.database().ref(resource + '/' + params.id).update(dataUpdate)
               .then(() => resolve({ data: dataUpdate }))
               .catch(reject)
             return
@@ -139,7 +139,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
           case CREATE:
             let newItemKey = params.data.id
             if (!newItemKey) {
-              const newItemKey = firebase.database().ref().child(params.basePath).push().key;
+              const newItemKey = firebase.database().ref().child(resource).push().key;
             } else if (resourcesData[resource] && resourcesData[resource][newItemKey]) {
               reject(new Error('ID already in use'))
               return
@@ -155,7 +155,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
                 key: newItemKey
               }
             )
-            firebase.database().ref(params.basePath + '/' + newItemKey).update(dataCreate)
+            firebase.database().ref(resource + '/' + newItemKey).update(dataCreate)
             .then(() => resolve({ data: dataCreate }))
             .catch(reject)
             return
