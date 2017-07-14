@@ -1,6 +1,15 @@
 /* globals jest, test, expect, jasmine, debugger */
 
-import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest'
+import {
+  GET_LIST,
+  GET_ONE,
+  GET_MANY,
+  GET_MANY_REFERENCE,
+  CREATE,
+  UPDATE,
+  DELETE
+} from 'admin-on-rest'
+
 import firebase from 'firebase'
 
 import { RestClient } from '../src'
@@ -18,8 +27,39 @@ const firebaseConfig = {
   messagingSenderId: '1092760245154'
 }
 
-const client = RestClient(firebaseConfig, ['posts'])
+const client = RestClient(['posts', 'profiles'], firebaseConfig)
 
 test('RestClient is defined', () => {
   expect(RestClient).toBeDefined()
+})
+
+test('RestClient Get Posts', () => {
+  client(GET_LIST, 'posts', {}).then(data => {
+    expect(data).toBeDefined()
+    expect(data.length).toBeDefined()
+    expect(data.length).toBeGreaterThan(1)
+  })
+})
+
+test('RestClient Get Posts From User 1', () => {
+  client(GET_LIST, 'posts', { filters: { userId: 1 } }).then(data => {
+    expect(data).toBeDefined()
+    expect(data.length).toBeDefined()
+    expect(data.length).toBe(10)
+  })
+})
+
+test('RestClient Get Posts With Text', () => {
+  client(GET_LIST, 'posts', { filters: { q: 'vero' } }).then(data => {
+    expect(data).toBeDefined()
+    expect(data.length).toBeDefined()
+    expect(data.length).toBe(10)
+  })
+})
+
+test('RestClient Get Posts With Impossible Text', () => {
+  client(GET_LIST, 'posts', { filters: { q: 'thisisaveryimpossibletext' } }).then(data => {
+    expect(data).toBeDefined()
+    expect(data.length).toBe(0)
+  })
 })

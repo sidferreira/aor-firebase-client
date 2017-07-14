@@ -3,7 +3,6 @@ import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest'
 import firebase from 'firebase'
 
 function firebaseAuthCheck (auth, resolve, reject) {
-  console.log('firebaseAuthCheck')
   if (auth) {
     // TODO make it a parameter
     firebase.database().ref('/users/' + auth.uid).once('value')
