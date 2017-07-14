@@ -12,15 +12,11 @@ import {
 
 import firebase from 'firebase'
 
-import { RestClient } from '../src'
+import { RestClient } from '../lib'
 
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
 
 debugger;
-
-process.on('unhandledRejection', (reason) => {
-    console.log('Reason: ' + reason);
-})
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwoZ5Ph6Hx3-DplWzaouqUOnu4lNKeAFQ',

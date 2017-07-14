@@ -1,6 +1,6 @@
 {
   "name": "aor-firebase-client",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Firebase Client for Admin On Rest",
   "main": "lib/index.js",
   "scripts": {
