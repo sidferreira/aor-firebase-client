@@ -74,10 +74,33 @@ export default (trackedResources = [], firebaseConfig = {}) => {
               })
             } else if (params.pagination) {
               /** GET_LIST / GET_MANY_REFERENCE */
+              let values = []
+
+              const filterKeys = Object.keys(params.filter || {})
+              /* TODO Must have a better way */
+              if (filterKeys.length) {
+                resourcesData[resource].map(value => {
+                  let filterIndex = 0
+                  while(filterIndex < filterKeys.length) {
+                    let property = filterKeys[filterIndex]
+                    if (property != 'q' && value[property] != params.filter[property]) {
+                      return
+                    } else if (property === 'q') {
+                      if (JSON.stringify(value).indexOf(params.filter['q']) == -1) {
+                        return
+                      }
+                    }
+                    filterIndex++
+                  }
+                  values.push(value)
+                })
+              } else {
+                values = Object.values(resourcesData[resource])
+              }
+
               const {page, perPage} = params.pagination
               const _start = (page - 1) * perPage
               const _end = page * perPage
-              const values = Object.values(resourcesData[resource])
               data = values.slice(_start, _end)
               ids = Object.keys(resourcesData[resource]).slice(_start, _end)
               total = values.length
