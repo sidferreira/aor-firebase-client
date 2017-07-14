@@ -1,6 +1,9 @@
 import React from 'react'
-import { Admin, Resource, List, Datagrid, TextField } from 'admin-on-rest'
+import { Admin, Resource, Delete } from 'admin-on-rest'
 import { RestClient, AuthClient } from 'aor-firebase-client'
+
+import { PostList, PostEdit, PostCreate } from './Posts';
+import { UserList } from './Users';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwoZ5Ph6Hx3-DplWzaouqUOnu4lNKeAFQ',
@@ -11,21 +14,14 @@ const firebaseConfig = {
   messagingSenderId: '1092760245154'
 }
 
-export const PostList = (props) => (
-  <List {...props}>
-    <Datagrid>
-      <TextField source='id' />
-      <TextField source='title' />
-      <TextField source='body' />
-    </Datagrid>
-  </List>
-)
+const trackedResources = ['posts', 'profiles']
 
-const trackedResources = ['posts']
+const shouldUseAuth = !(window && window.location && window.location.search && window.location.search === '?security=0')
 
 const App = () => (
-  <Admin restClient={RestClient(trackedResources, firebaseConfig)} authClient={AuthClient} >
-    <Resource name="posts" list={PostList} />
+  <Admin restClient={RestClient(trackedResources, firebaseConfig)} authClient={shouldUseAuth ? AuthClient : null} >
+        <Resource name="posts" list={PostList} edit={PostEdit} create={PostCreate} remove={Delete} />
+        <Resource name="profiles" list={UserList} />
   </Admin>
 );
 
