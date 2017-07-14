@@ -10,7 +10,7 @@ function firebaseAuthCheck (auth, resolve, reject) {
       const profile = snapshot.val()
       // TODO make it a parameter
       if (profile && profile.isAdmin) {
-        auth.getToken().then((firebaseToken) => {
+        auth.getIdToken().then((firebaseToken) => {
           let user = {auth, profile, firebaseToken}
 
           // TODO improve this! Save it on redux or something
@@ -52,7 +52,7 @@ export default (type, params) => {
     return new Promise((resolve, reject) => {
       firebase.auth().signInWithEmailAndPassword(username, password)
       .then(auth => firebaseAuthCheck(auth, resolve, reject))
-      .catch(() => new Error('User not found'))
+      .catch(e => reject(new Error('User not found')))
     })
   }
   return Promise.resolve()
