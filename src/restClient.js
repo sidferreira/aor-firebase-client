@@ -10,20 +10,46 @@ import {
   DELETE
 } from 'admin-on-rest'
 
+/**
+ * @param {string[]|Object[]} trackedResources Array of resource names or array of Objects containing name and
+ * optional path properties (path defaults to name)
+ * @param {Object} firebaseConfig Optiona Firebase configuration
+ */
 export default (trackedResources = [], firebaseConfig = {}) => {
   /** TODO Move this to the Redux Store */
   const resourcesStatus = {}
   const resourcesReferences = {}
   const resourcesData = {}
+  const resourcesPaths = {}
 
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig)
   }
 
   trackedResources.map(resource => {
+    if (typeof resource === 'object') {
+      if (!resource.name) {
+        throw new Error(`name is missing from resource ${resource}`)
+      }
+
+      const path = resource.path || resource.name
+      const name = resource.name
+
+      // Check path ends with name so the initial children can be loaded from on 'value' below.
+      const pattern = path.indexOf('/') >= 0 ? `/${name}$` : `${name}$`
+      if (!path.match(pattern)) {
+        throw new Error(`path ${path} must match ${pattern}`)
+      }
+
+      resourcesPaths[name] = path
+      resource = name
+    } else {
+      resourcesPaths[resource] = resource
+    }
+
     resourcesData[resource] = {}
     resourcesStatus[resource] = new Promise(resolve => {
-      let ref = resourcesReferences[resource] = firebase.database().ref(resource)
+      let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
 
       ref.on('value', function (childSnapshot) {
         /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
@@ -123,7 +149,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             return
 
           case DELETE:
-            firebase.database().ref(resource + '/' + params.id).remove()
+            firebase.database().ref(resourcesPaths[resource] + '/' + params.id).remove()
             .then(() => { resolve({ data: params.id }) })
             .catch(reject)
             return
@@ -131,7 +157,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
           case UPDATE:
             const dataUpdate = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
 
-            firebase.database().ref(resource + '/' + params.id).update(dataUpdate)
+            firebase.database().ref(resourcesPaths[resource] + '/' + params.id).update(dataUpdate)
               .then(() => resolve({ data: dataUpdate }))
               .catch(reject)
             return
@@ -139,7 +165,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
           case CREATE:
             let newItemKey = params.data.id
             if (!newItemKey) {
-              const newItemKey = firebase.database().ref().child(resource).push().key;
+              const newItemKey = firebase.database().ref().child(resourcesPaths[resource]).push().key;
             } else if (resourcesData[resource] && resourcesData[resource][newItemKey]) {
               reject(new Error('ID already in use'))
               return
@@ -155,7 +181,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
                 key: newItemKey
               }
             )
-            firebase.database().ref(resource + '/' + newItemKey).update(dataCreate)
+            firebase.database().ref(resourcesPaths[resource] + '/' + newItemKey).update(dataCreate)
             .then(() => resolve({ data: dataCreate }))
             .catch(reject)
             return
