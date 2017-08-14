@@ -146,7 +146,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
           case CREATE:
             let newItemKey = params.data.id
             if (!newItemKey) {
-              const newItemKey = firebase.database().ref().child(resource).push().key;
+              newItemKey = firebase.database().ref().child(resource).push().key;
             } else if (resourcesData[resource] && resourcesData[resource][newItemKey]) {
               reject(new Error('ID already in use'))
               return
