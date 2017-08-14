@@ -102,17 +102,24 @@ export default (trackedResources = [], firebaseConfig = {}) => {
               /** GET_LIST / GET_MANY_REFERENCE */
               let values = []
 
-              const filterKeys = Object.keys(params.filter || {})
+              // Copy the filter params so we can modify for GET_MANY_REFERENCE support.
+              const filter = Object.assign({}, params.filter)
+
+              if (params.target && params.id) {
+                filter[params.target] = params.id
+              }
+
+              const filterKeys = Object.keys(filter)
               /* TODO Must have a better way */
               if (filterKeys.length) {
                 Object.values(resourcesData[resource]).map(value => {
                   let filterIndex = 0
                   while(filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
-                    if (property != 'q' && value[property] != params.filter[property]) {
+                    if (property != 'q' && value[property] != filter[property]) {
                       return
                     } else if (property === 'q') {
-                      if (JSON.stringify(value).indexOf(params.filter['q']) == -1) {
+                      if (JSON.stringify(value).indexOf(filter['q']) == -1) {
                         return
                       }
                     }
@@ -166,6 +173,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             let newItemKey = params.data.id
             if (!newItemKey) {
               const newItemKey = firebase.database().ref().child(resourcesPaths[resource]).push().key;
+  //            newItemKey = firebase.database().ref().child(resource).push().key;
             } else if (resourcesData[resource] && resourcesData[resource][newItemKey]) {
               reject(new Error('ID already in use'))
               return
