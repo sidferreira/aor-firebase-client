@@ -10,7 +10,15 @@ import {
   DELETE
 } from 'admin-on-rest'
 
-export default (trackedResources = [], firebaseConfig = {}) => {
+// Allow override of timestamp field names
+const timestampFieldNames = {
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
+}
+
+export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
+  Object.assign(timestampFieldNames, options.timestampFieldNames)
+
   /** TODO Move this to the Redux Store */
   const resourcesStatus = {}
   const resourcesReferences = {}
@@ -129,7 +137,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             return
 
           case UPDATE:
-            const dataUpdate = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
+            const dataUpdate = Object.assign({ [timestampFieldNames.updatedAt]: Date.now() }, resourcesData[resource][params.id], params.data)
 
             firebase.database().ref(resource + '/' + params.id).update(dataUpdate)
               .then(() => resolve({ data: dataUpdate }))
@@ -146,8 +154,8 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             }
             const dataCreate = Object.assign(
               {
-                created_at: Date.now(),
-                updated_at: Date.now()
+                [timestampFieldNames.createdAt]: Date.now(),
+                [timestampFieldNames.updatedAt]: Date.now()
               },
               params.data,
               {
