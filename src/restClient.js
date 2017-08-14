@@ -15,7 +15,15 @@ import {
  * optional path properties (path defaults to name)
  * @param {Object} firebaseConfig Optiona Firebase configuration
  */
-export default (trackedResources = [], firebaseConfig = {}) => {
+
+const timestampFieldNames = {
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
+}
+
+export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
+  Object.assign(timestampFieldNames, options.timestampFieldNames)
+
   /** TODO Move this to the Redux Store */
   const resourcesStatus = {}
   const resourcesReferences = {}
@@ -114,12 +122,12 @@ export default (trackedResources = [], firebaseConfig = {}) => {
               if (filterKeys.length) {
                 Object.values(resourcesData[resource]).map(value => {
                   let filterIndex = 0
-                  while(filterIndex < filterKeys.length) {
+                  while (filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
-                    if (property != 'q' && value[property] != filter[property]) {
+                    if (property !== 'q' && value[property] !== filter[property]) {
                       return
                     } else if (property === 'q') {
-                      if (JSON.stringify(value).indexOf(filter['q']) == -1) {
+                      if (JSON.stringify(value).indexOf(filter['q']) === -1) {
                         return
                       }
                     }
@@ -162,7 +170,7 @@ export default (trackedResources = [], firebaseConfig = {}) => {
             return
 
           case UPDATE:
-            const dataUpdate = Object.assign({ updated_at: Date.now() }, resourcesData[resource][params.id], params.data)
+            const dataUpdate = Object.assign({ [timestampFieldNames.updatedAt]: Date.now() }, resourcesData[resource][params.id], params.data)
 
             firebase.database().ref(resourcesPaths[resource] + '/' + params.id).update(dataUpdate)
               .then(() => resolve({ data: dataUpdate }))
@@ -172,16 +180,15 @@ export default (trackedResources = [], firebaseConfig = {}) => {
           case CREATE:
             let newItemKey = params.data.id
             if (!newItemKey) {
-              const newItemKey = firebase.database().ref().child(resourcesPaths[resource]).push().key;
-  //            newItemKey = firebase.database().ref().child(resource).push().key;
+              newItemKey = firebase.database().ref().child(resourcesPaths[resource]).push().key;
             } else if (resourcesData[resource] && resourcesData[resource][newItemKey]) {
               reject(new Error('ID already in use'))
               return
             }
             const dataCreate = Object.assign(
               {
-                created_at: Date.now(),
-                updated_at: Date.now()
+                [timestampFieldNames.createdAt]: Date.now(),
+                [timestampFieldNames.updatedAt]: Date.now()
               },
               params.data,
               {
