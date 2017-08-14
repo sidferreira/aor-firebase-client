@@ -67,3 +67,32 @@ test('RestClient Get Posts With Impossible Text', () => {
     expect(data.length).toBe(0)
   })
 })
+
+describe('RestClient trackedResources', () => {
+  test('rejects objects without a name', () => {
+    expect(() => {
+      RestClient([{notName: 'posts'}])
+    }).toThrow()
+  })
+  test('accepts objects with a name', () => {
+    const client = RestClient([{name: 'posts'}])
+    return client(GET_ONE, 'posts', { id: 1 }).then(data => {
+      expect(data).toBeDefined()
+      expect(data.data).toBeDefined()
+      expect(data.data.id).toBe('1')
+    })
+  })
+  test.only('accepts objects with a name and path', () => {
+    const client = RestClient([{name: 'posts', path: '/posts'}])
+    return client(GET_ONE, 'posts', { id: 1 }).then(data => {
+      expect(data).toBeDefined()
+      expect(data.data).toBeDefined()
+      expect(data.data.id).toBe('1')
+    })
+  })
+  test('rejects paths that do not end with the name', () => {
+    expect(() => {
+      RestClient([{name: 'posts', path: 'path/to/not_posts'}])
+    }).toThrow()
+  })
+})
