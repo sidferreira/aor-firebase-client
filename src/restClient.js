@@ -10,17 +10,17 @@ import {
   DELETE
 } from 'admin-on-rest'
 
-// Allow override of timestamp field names
-const timestampFieldNames = {
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
-}
-
 /**
  * @param {string[]|Object[]} trackedResources Array of resource names or array of Objects containing name and
  * optional path properties (path defaults to name)
  * @param {Object} firebaseConfig Optiona Firebase configuration
  */
+
+const timestampFieldNames = {
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
+}
+
 export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
   Object.assign(timestampFieldNames, options.timestampFieldNames)
 
@@ -122,12 +122,12 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
               if (filterKeys.length) {
                 Object.values(resourcesData[resource]).map(value => {
                   let filterIndex = 0
-                  while(filterIndex < filterKeys.length) {
+                  while (filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
-                    if (property != 'q' && value[property] != filter[property]) {
+                    if (property !== 'q' && value[property] !== filter[property]) {
                       return
                     } else if (property === 'q') {
-                      if (JSON.stringify(value).indexOf(filter['q']) == -1) {
+                      if (JSON.stringify(value).indexOf(filter['q']) === -1) {
                         return
                       }
                     }
