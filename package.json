@@ -5,7 +5,8 @@
   "main": "lib/index.js",
   "scripts": {
     "test": "jest",
-    "build": "babel src -d lib"
+    "build": "babel src -d lib",
+    "prepare": "yarn run build"
   },
   "author": "Sid Ferreira",
   "license": "ISC",
@@ -35,7 +36,7 @@
     "jest-localstorage-mock": "^1.2.0",
     "react-test-renderer": "^15.6.1"
   },
-  "jest": { 
+  "jest": {
     "testEnvironment": "node",
     "setupFiles": [
       "jest-localstorage-mock"
