@@ -96,6 +96,9 @@ export default App;
 
 ## Changelog
 
+### v0.0.9
+  * Fixes
+
 ### v0.0.8
   * Fix it saving on the wrong path [#7](https://github.com/sidferreira/aor-firebase-client/issues/7)
   * Fix README links
