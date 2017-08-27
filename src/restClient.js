@@ -61,8 +61,8 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
 
       ref.on('value', function (childSnapshot) {
         /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-        if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() }
-        Object.keys(resourcesData[resource]).map(key => { resourcesData[resource][key].id = key })
+        if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
+        Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
         ref.on('child_added', function (childSnapshot) {
           resourcesData[resource][childSnapshot.key] = childSnapshot.val()
           resourcesData[resource][childSnapshot.key].id = childSnapshot.key
