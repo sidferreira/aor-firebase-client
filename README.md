@@ -44,7 +44,16 @@ export default App;
 
 ### Auth Client
 The package lets you manage the login/logout process implementing an optional `authClient` prop of the `Admin` component [(see documentation)](https://marmelab.com/admin-on-rest/Authentication.html).  
-It stores a `firebaseToken` in  `localStorage`.  
+It stores a `firebaseToken` in  `localStorage`.
+
+This requires a `users` resource relative to the root, with the user IDs as the children and an `isAdmin` boolean value.
+
+```
+app-name
++- users
+   +- USERID-FROM-FIREBASE-AUTH
+      +- isAdmin: true
+```
 
 
 ```js
