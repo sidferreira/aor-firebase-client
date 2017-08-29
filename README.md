@@ -109,6 +109,7 @@ export default App;
   * Documentation fix for authClient  [#17](https://github.com/sidferreira/aor-firebase-client/pull/17)
   * Handle empty collections  [#18](https://github.com/sidferreira/aor-firebase-client/pull/18)
   * Build lib on prepare [#19](https://github.com/sidferreira/aor-firebase-client/pull/19)
+  * Thanks to [@grahamlyus](https://github.com/grahamlyus) who worked a LOT this month to make this release possible! Kudos!
 
 ### v0.0.9
   * Fixes
