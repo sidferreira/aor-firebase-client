@@ -34,48 +34,52 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
     firebase.initializeApp(firebaseConfig)
   }
 
-  trackedResources.map(resource => {
-    if (typeof resource === 'object') {
-      if (!resource.name) {
-        throw new Error(`name is missing from resource ${resource}`)
-      }
+  firebase.auth().onAuthStateChanged(function(user) {
+    if(user) {
+      trackedResources.map(resource => {
+        if (typeof resource === 'object') {
+          if (!resource.name) {
+            throw new Error(`name is missing from resource ${resource}`)
+          }
 
-      const path = resource.path || resource.name
-      const name = resource.name
+          const path = resource.path || resource.name
+          const name = resource.name
 
-      // Check path ends with name so the initial children can be loaded from on 'value' below.
-      const pattern = path.indexOf('/') >= 0 ? `/${name}$` : `${name}$`
-      if (!path.match(pattern)) {
-        throw new Error(`path ${path} must match ${pattern}`)
-      }
+          // Check path ends with name so the initial children can be loaded from on 'value' below.
+          const pattern = path.indexOf('/') >= 0 ? `/${name}$` : `${name}$`
+          if (!path.match(pattern)) {
+            throw new Error(`path ${path} must match ${pattern}`)
+          }
 
-      resourcesPaths[name] = path
-      resource = name
-    } else {
-      resourcesPaths[resource] = resource
-    }
+          resourcesPaths[name] = path
+          resource = name
+        } else {
+          resourcesPaths[resource] = resource
+        }
 
-    resourcesData[resource] = {}
-    resourcesStatus[resource] = new Promise(resolve => {
-      let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
+        resourcesData[resource] = {}
+        resourcesStatus[resource] = new Promise((resolve, reject) => {
+          let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
 
-      ref.on('value', function (childSnapshot) {
-        /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-        if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
-        Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
-        ref.on('child_added', function (childSnapshot) {
-          resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-          resourcesData[resource][childSnapshot.key].id = childSnapshot.key
+          ref.on('value', function (childSnapshot) {
+            /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
+            if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
+            Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
+            ref.on('child_added', function (childSnapshot) {
+              resourcesData[resource][childSnapshot.key] = childSnapshot.val()
+              resourcesData[resource][childSnapshot.key].id = childSnapshot.key
+            })
+            ref.on('child_removed', function (oldChildSnapshot) {
+              if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
+            })
+            ref.on('child_changed', function (childSnapshot) {
+              resourcesData[resource][childSnapshot.key] = childSnapshot.val()
+            })
+            resolve()
+          })
         })
-        ref.on('child_removed', function (oldChildSnapshot) {
-          if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
-        })
-        ref.on('child_changed', function (childSnapshot) {
-          resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-        })
-        resolve()
       })
-    })
+    }
   })
 
   /**
