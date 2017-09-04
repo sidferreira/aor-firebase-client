@@ -125,12 +125,53 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
               /* TODO Must have a better way */
               if (filterKeys.length) {
                 Object.values(resourcesData[resource]).map(value => {
+                  /**
+                  Nested matching between the filter and the object
+                  */
+
+                  var nestedMatch = function(filter, value) {
+                    var keys = Object.keys(filter);
+                    for(var i = 0; i < keys.length; i++) {
+                      var property = keys[i];
+                      var type = typeof(filter[property]);
+                      if (!(property in value)) {
+                        // console.log('Does not have key');
+                        return false;
+                      }
+                      if(typeof(filter[property]) !== typeof(value[property])){
+                        // console.log("Does not have same type", 
+                          // typeof(filter[property]), typeof(value[property]));
+                        return false;
+                      }
+                      if((type === "string" || type === "boolean") && value[property] !== filter[property]) {
+                        // console.log('Does not same value');
+                        return false;
+                      }
+                      if (type === "object") {
+                        if(!nestedMatch(filter[property], value[property])) {
+                          // console.log('Drilling down not match');
+                          return false;
+                        }
+                      }
+                    }
+                    return true;
+                  }
+
                   let filterIndex = 0
                   while (filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
-                    if (property !== 'q' && value[property] !== filter[property]) {
-                      return
-                    } else if (property === 'q') {
+                    if (property !== 'q') {
+                      // console.log('Trying to match', filter[property]);
+                      var childFilter = {};
+                      childFilter[property] = filter[property];
+                      if(!nested_match(childFilter, value)) {
+                        return;
+                      }
+                      else{
+                        // console.log('Matched found');
+                      }
+                    }
+                    else if (property === 'q') {
                       if (JSON.stringify(value).indexOf(filter['q']) === -1) {
                         return
                       }
