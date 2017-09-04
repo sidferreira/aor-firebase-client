@@ -91,6 +91,9 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
 
   return (type, resource, params) => {
     return new Promise((resolve, reject) => {
+      if(!firebase.auth().currentUser) {
+        reject(new Error('Not login yet'));
+      }
       resourcesStatus[resource].then(() => {
         switch (type) {
           case GET_LIST:

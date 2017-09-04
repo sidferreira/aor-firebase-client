@@ -52,7 +52,7 @@ export default (type, params) => {
     return new Promise((resolve, reject) => {
       firebase.auth().signInWithEmailAndPassword(username, password)
       .then(auth => firebaseAuthCheck(auth, resolve, reject))
-      .catch(e => reject(new Error('User not found')))
+      .catch(e => reject(e))
     })
   }
   return Promise.resolve()
