@@ -1,4 +1,5 @@
 import firebase from 'firebase'
+import arraySort from 'array-sort'
 
 import {
   GET_LIST,
@@ -125,6 +126,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
               }
 
               const filterKeys = Object.keys(filter)
+
               /* TODO Must have a better way */
               if (filterKeys.length) {
                 Object.values(resourcesData[resource]).map(value => {
@@ -184,7 +186,12 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
                   values.push(value)
                 })
               } else {
-                values = Object.values(resourcesData[resource])
+                values = Object.values(resourcesData[resource]);
+              }
+
+              if(params.sort) {
+                const order = params.sort.order === 'ASC' ? false: true;
+                arraySort(values, params.sort.field, {reverse: order});
               }
 
               const {page, perPage} = params.pagination
