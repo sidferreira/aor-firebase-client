@@ -167,7 +167,11 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
                       // console.log('Trying to match', filter[property]);
                       var childFilter = {};
                       childFilter[property] = filter[property];
+<<<<<<< HEAD
                       if(!nestedMatch(childFilter, value)) {
+=======
+                      if(!nested_match(childFilter, value)) {
+>>>>>>> b67e78fbb37a4ccdc99d6c0ae8e61b5779a56bee
                         return;
                       }
                       else{
