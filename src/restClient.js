@@ -29,9 +29,40 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
   const resourcesReferences = {}
   const resourcesData = {}
   const resourcesPaths = {}
+  const resourcesUploadFields = {}
 
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig)
+  }
+  const storageRef = firebase.storage().ref()
+  /* Functions */
+
+  const upload = async (fieldName, submitedData, id, resourceName) => {
+    const file = submitedData[fieldName] ? submitedData[fieldName][0].rawFile : {}
+    const result = {}
+    if (file && file.name) {
+      const ref = storageRef.child(`${resourcesPaths[resourceName]}/${id}/${fieldName}`)
+      const snapshot = await ref.put(file)
+      result[fieldName] = [{}]
+      result[fieldName][0].uploadedAt = Date.now()
+      result[fieldName][0].src = snapshot.downloadURL.split('?').shift() + '?alt=media'
+      return result
+    }
+    return false
+  }
+
+  const save = async (id, data, resourceName, resolve, reject, uploadResults) => {
+    try {
+      if (uploadResults) {
+        uploadResults.map(result => result ? Object.assign(data, result) : false)
+      }
+      await firebase.database().ref(resourcesPaths[resourceName] + '/' + id).update(data)
+      resolve({ data })
+      return data
+    } catch (e) {
+      reject()
+    }
+    return false
   }
 
   trackedResources.map(resource => {
@@ -40,8 +71,9 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
         throw new Error(`name is missing from resource ${resource}`)
       }
 
-      const path = resource.path || resource.name
       const name = resource.name
+      const path = resource.path || resource.name
+      const uploadFields = resource.uploadFields || []
 
       // Check path ends with name so the initial children can be loaded from on 'value' below.
       const pattern = path.indexOf('/') >= 0 ? `/${name}$` : `${name}$`
@@ -49,6 +81,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
         throw new Error(`path ${path} must match ${pattern}`)
       }
 
+      resourcesUploadFields[name] = uploadFields
       resourcesPaths[name] = path
       resource = name
     } else {
@@ -76,6 +109,8 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
         resolve()
       })
     })
+
+    return true
   })
 
   /**
@@ -105,6 +140,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
                   data.push(resourcesData[resource][key])
                   total++
                 }
+                return total
               })
             } else if (params.pagination) {
               /** GET_LIST / GET_MANY_REFERENCE */
@@ -125,15 +161,16 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
                   while (filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
                     if (property !== 'q' && value[property] !== filter[property]) {
-                      return
+                      return filterIndex
                     } else if (property === 'q') {
                       if (JSON.stringify(value).indexOf(filter['q']) === -1) {
-                        return
+                        return filterIndex
                       }
                     }
                     filterIndex++
                   }
                   values.push(value)
+                  return filterIndex
                 })
               } else {
                 values = Object.values(resourcesData[resource])
@@ -155,9 +192,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
           case GET_ONE:
             const key = params.id
             if (key && resourcesData[resource][key]) {
-              resolve({
-                data: resourcesData[resource][key]
-              })
+              resolve({ data: resourcesData[resource][key] })
             } else {
               reject(new Error('Key not found'))
             }
@@ -165,40 +200,32 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
 
           case DELETE:
             firebase.database().ref(resourcesPaths[resource] + '/' + params.id).remove()
-            .then(() => { resolve({ data: params.id }) })
-            .catch(reject)
-            return
-
-          case UPDATE:
-            const dataUpdate = Object.assign({ [timestampFieldNames.updatedAt]: Date.now() }, resourcesData[resource][params.id], params.data)
-
-            firebase.database().ref(resourcesPaths[resource] + '/' + params.id).update(dataUpdate)
-              .then(() => resolve({ data: dataUpdate }))
+              .then(() => { resolve({ data: params.id }) })
               .catch(reject)
             return
 
+          case UPDATE:
           case CREATE:
-            let newItemKey = params.data.id
-            if (!newItemKey) {
-              newItemKey = firebase.database().ref().child(resourcesPaths[resource]).push().key;
-            } else if (resourcesData[resource] && resourcesData[resource][newItemKey]) {
+            let itemId = params.data.id || params.id
+            if (!itemId) {
+              itemId = firebase.database().ref().child(resourcesPaths[resource]).push().key
+            }
+            if (resourcesData[resource] && resourcesData[resource][itemId] && type === CREATE) {
               reject(new Error('ID already in use'))
               return
             }
-            const dataCreate = Object.assign(
-              {
-                [timestampFieldNames.createdAt]: Date.now(),
-                [timestampFieldNames.updatedAt]: Date.now()
-              },
-              params.data,
-              {
-                id: newItemKey,
-                key: newItemKey
-              }
-            )
-            firebase.database().ref(resourcesPaths[resource] + '/' + newItemKey).update(dataCreate)
-            .then(() => resolve({ data: dataCreate }))
-            .catch(reject)
+
+            try {
+              let dataCreate = Object.assign({ [timestampFieldNames.updatedAt]: Date.now() }, resourcesData[resource][params.id], params.data)
+
+              const uploads = resourcesUploadFields[resource] ? resourcesUploadFields[resource]
+                .map(field => upload(field, dataCreate, itemId, resource)) : []
+
+              Promise.all(uploads).then(uploadResults => save(itemId, dataCreate, resource, resolve, reject, uploadResults))
+            } catch (e) {
+              reject(e)
+            }
+
             return
 
           default:
