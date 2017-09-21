@@ -21,6 +21,45 @@ const timestampFieldNames = {
   updatedAt: 'updated_at'
 }
 
+export const methodUpload = async (fieldName, submitedData, id, resourceName, resourcePath) => {
+  const file = submitedData[fieldName] ? submitedData[fieldName][0].rawFile : {}
+  const result = {}
+  if (file && file.name) {
+    const ref = firebase.storage().ref().child(`${resourcePath}/${id}/${fieldName}`)
+    const snapshot = await ref.put(file)
+    result[fieldName] = [{}]
+    result[fieldName][0].uploadedAt = Date.now()
+    result[fieldName][0].src = snapshot.downloadURL.split('?').shift() + '?alt=media'
+    return result
+  }
+  return false
+}
+
+export const methodSave = async (id, data, resourceName, resourcePath, resolve, reject, uploadResults) => {
+  try {
+    if (uploadResults) {
+      uploadResults.map(result => result ? Object.assign(data, result) : false)
+    }
+    await firebase.database().ref(resourcePath + '/' + id).update(data)
+    resolve({ data })
+    return data
+  } catch (e) {
+    reject(e)
+  }
+  return false
+}
+
+export const methodDelete = async (id, resourceName, resourcePath, resolve, reject) => {
+  try {
+    await firebase.database().ref(resourcePath + '/' + id).remove()
+    resolve({ data: id })
+    return { data: id }
+  } catch (e) {
+    reject(e)
+  }
+  return false
+}
+
 export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
   Object.assign(timestampFieldNames, options.timestampFieldNames)
 
@@ -34,36 +73,11 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig)
   }
-  const storageRef = firebase.storage().ref()
+
   /* Functions */
-
-  const upload = async (fieldName, submitedData, id, resourceName) => {
-    const file = submitedData[fieldName] ? submitedData[fieldName][0].rawFile : {}
-    const result = {}
-    if (file && file.name) {
-      const ref = storageRef.child(`${resourcesPaths[resourceName]}/${id}/${fieldName}`)
-      const snapshot = await ref.put(file)
-      result[fieldName] = [{}]
-      result[fieldName][0].uploadedAt = Date.now()
-      result[fieldName][0].src = snapshot.downloadURL.split('?').shift() + '?alt=media'
-      return result
-    }
-    return false
-  }
-
-  const save = async (id, data, resourceName, resolve, reject, uploadResults) => {
-    try {
-      if (uploadResults) {
-        uploadResults.map(result => result ? Object.assign(data, result) : false)
-      }
-      await firebase.database().ref(resourcesPaths[resourceName] + '/' + id).update(data)
-      resolve({ data })
-      return data
-    } catch (e) {
-      reject()
-    }
-    return false
-  }
+  const upload = options.methodUpload || methodUpload
+  const save = options.methodSave || methodSave
+  const del = options.methodUpload || methodUpload
 
   trackedResources.map(resource => {
     if (typeof resource === 'object') {
@@ -101,6 +115,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
           resourcesData[resource][childSnapshot.key].id = childSnapshot.key
         })
         ref.on('child_removed', function (oldChildSnapshot) {
+          console.log('child_removed', resource, oldChildSnapshot.key)
           if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
         })
         ref.on('child_changed', function (childSnapshot) {
@@ -115,14 +130,14 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
 
   /**
    * @param {string} type Request type, e.g GET_LIST
-   * @param {string} resource Resource name, e.g. "posts"
+   * @param {string} resourceName Resource name, e.g. "posts"
    * @param {Object} payload Request parameters. Depends on the request type
    * @returns {Promise} the Promise for a REST response
    */
 
-  return (type, resource, params) => {
+  return (type, resourceName, params) => {
     return new Promise((resolve, reject) => {
-      resourcesStatus[resource].then(() => {
+      resourcesStatus[resourceName].then(() => {
         switch (type) {
           case GET_LIST:
           case GET_MANY:
@@ -135,9 +150,9 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
             if (params.ids) {
               /** GET_MANY */
               params.ids.map(key => {
-                if (resourcesData[resource][key]) {
+                if (resourcesData[resourceName][key]) {
                   ids.push(key)
-                  data.push(resourcesData[resource][key])
+                  data.push(resourcesData[resourceName][key])
                   total++
                 }
                 return total
@@ -156,7 +171,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
               const filterKeys = Object.keys(filter)
               /* TODO Must have a better way */
               if (filterKeys.length) {
-                Object.values(resourcesData[resource]).map(value => {
+                Object.values(resourcesData[resourceName]).map(value => {
                   let filterIndex = 0
                   while (filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
@@ -173,14 +188,14 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
                   return filterIndex
                 })
               } else {
-                values = Object.values(resourcesData[resource])
+                values = Object.values(resourcesData[resourceName])
               }
 
               const {page, perPage} = params.pagination
               const _start = (page - 1) * perPage
               const _end = page * perPage
               data = values.slice(_start, _end)
-              ids = Object.keys(resourcesData[resource]).slice(_start, _end)
+              ids = Object.keys(resourcesData[resourceName]).slice(_start, _end)
               total = values.length
             } else {
               console.error('Unexpected parameters: ', params, type)
@@ -191,37 +206,38 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
 
           case GET_ONE:
             const key = params.id
-            if (key && resourcesData[resource][key]) {
-              resolve({ data: resourcesData[resource][key] })
+            if (key && resourcesData[resourceName][key]) {
+              resolve({ data: resourcesData[resourceName][key] })
             } else {
               reject(new Error('Key not found'))
             }
             return
 
           case DELETE:
-            firebase.database().ref(resourcesPaths[resource] + '/' + params.id).remove()
-              .then(() => { resolve({ data: params.id }) })
-              .catch(reject)
+            del(params.id, resourceName, resourcesPaths[resourceName], resolve, reject)
             return
 
           case UPDATE:
           case CREATE:
             let itemId = params.data.id || params.id
             if (!itemId) {
-              itemId = firebase.database().ref().child(resourcesPaths[resource]).push().key
+              itemId = firebase.database().ref().child(resourcesPaths[resourceName]).push().key
             }
-            if (resourcesData[resource] && resourcesData[resource][itemId] && type === CREATE) {
+            if (resourcesData[resourceName] && resourcesData[resourceName][itemId] && type === CREATE) {
               reject(new Error('ID already in use'))
               return
             }
 
             try {
-              let dataCreate = Object.assign({ [timestampFieldNames.updatedAt]: Date.now() }, resourcesData[resource][params.id], params.data)
+              let dataSave = Object.assign(
+                { [timestampFieldNames.updatedAt]: Date.now() },
+                resourcesData[resourceName][itemId],
+                params.data)
 
-              const uploads = resourcesUploadFields[resource] ? resourcesUploadFields[resource]
-                .map(field => upload(field, dataCreate, itemId, resource)) : []
+              const uploads = resourcesUploadFields[resourceName] ? resourcesUploadFields[resourceName]
+                .map(field => upload(field, dataSave, itemId, resourceName)) : []
 
-              Promise.all(uploads).then(uploadResults => save(itemId, dataCreate, resource, resolve, reject, uploadResults))
+              Promise.all(uploads).then(uploadResults => save(itemId, dataSave, resourceName, resolve, reject, uploadResults))
             } catch (e) {
               reject(e)
             }
