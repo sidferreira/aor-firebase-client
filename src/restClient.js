@@ -1,4 +1,5 @@
 import firebase from 'firebase'
+import arraySort from 'array-sort'
 
 import {
   GET_LIST,
@@ -137,6 +138,10 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
                 })
               } else {
                 values = Object.values(resourcesData[resource])
+              }
+
+              if(params.sort) {
+                arraySort(values, params.sort.field, {reverse: params.sort.order !== 'ASC'})
               }
 
               const {page, perPage} = params.pagination
