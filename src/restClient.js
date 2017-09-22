@@ -35,14 +35,17 @@ export const methodUpload = async (fieldName, submitedData, id, resourceName, re
   return false
 }
 
-export const methodSave = async (id, data, resourceName, resourcePath, resolve, reject, uploadResults) => {
+export const methodSave = async (id, newData, currentData, resourceName, resourcePath, resolve, reject, uploadResults) => {
   try {
     if (uploadResults) {
-      uploadResults.map(result => result ? Object.assign(data, result) : false)
+      uploadResults.map(result => result ? Object.assign(newData, result) : false)
     }
-    await firebase.database().ref(resourcePath + '/' + id).update(data)
-    resolve({ data })
-    return data
+    newData = Object.assign({ [timestampFieldNames.updatedAt]: Date.now() },
+      currentData,
+      newData)
+    await firebase.database().ref(resourcePath + '/' + id).update(newData)
+    resolve({ data: newData })
+    return newData
   } catch (e) {
     reject(e)
   }
@@ -58,6 +61,22 @@ export const methodDelete = async (id, resourceName, resourcePath, resolve, reje
     reject(e)
   }
   return false
+}
+
+export const methodGetItemID = (params, type, resourceName, resourcePath, resourceData, resolve, reject) => {
+  let itemId = params.data.id || params.id
+  if (!itemId) {
+    itemId = firebase.database().ref().child(resourcePath).push().key
+  }
+  if (!itemId) {
+    reject(new Error('ID is required'))
+    return 0
+  }
+  if (resourceData && resourceData[itemId] && type === CREATE) {
+    reject(new Error('ID already in use'))
+    return
+  }
+  return itemId
 }
 
 export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
@@ -78,6 +97,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
   const upload = options.methodUpload || methodUpload
   const save = options.methodSave || methodSave
   const del = options.methodUpload || methodUpload
+  const getItemID = options.getItemID || methodGetItemID
 
   trackedResources.map(resource => {
     if (typeof resource === 'object') {
@@ -219,25 +239,14 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
 
           case UPDATE:
           case CREATE:
-            let itemId = params.data.id || params.id
-            if (!itemId) {
-              itemId = firebase.database().ref().child(resourcesPaths[resourceName]).push().key
-            }
-            if (resourcesData[resourceName] && resourcesData[resourceName][itemId] && type === CREATE) {
-              reject(new Error('ID already in use'))
-              return
-            }
+            let itemId = getItemID(params, type, resourceName, resourcesPaths[resourceName], resourcesData[resourceName], resolve, reject)
 
             try {
-              let dataSave = Object.assign(
-                { [timestampFieldNames.updatedAt]: Date.now() },
-                resourcesData[resourceName][itemId],
-                params.data)
-
               const uploads = resourcesUploadFields[resourceName] ? resourcesUploadFields[resourceName]
-                .map(field => upload(field, dataSave, itemId, resourceName)) : []
-
-              Promise.all(uploads).then(uploadResults => save(itemId, dataSave, resourceName, resolve, reject, uploadResults))
+                .map(field => upload(field, params.data, itemId, resourceName)) : []
+              const currentData = resourcesData[resourceName][itemId] || {}
+              Promise.all(uploads).then(uploadResults =>
+                save(itemId, params.data, currentData, resourceName, resolve, reject, uploadResults))
             } catch (e) {
               reject(e)
             }
