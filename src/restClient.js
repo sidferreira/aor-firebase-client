@@ -52,8 +52,12 @@ export const methodSave = async (id, newData, currentData, resourceName, resourc
   return false
 }
 
-export const methodDelete = async (id, resourceName, resourcePath, resolve, reject) => {
+export const methodDelete = async (id, resourceName, resourcePath, uploadFields, resolve, reject) => {
   try {
+    if (uploadFields.length) {
+      uploadFields.map(fieldName =>
+        firebase.storage().ref().child(`${resourcePath}/${id}/${fieldName}`).delete())
+    }
     await firebase.database().ref(resourcePath + '/' + id).remove()
     resolve({ data: id })
     return { data: id }
@@ -234,7 +238,8 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
             return
 
           case DELETE:
-            del(params.id, resourceName, resourcesPaths[resourceName], resolve, reject)
+            const uploadFields = resourcesUploadFields[resourceName] ? resourcesUploadFields[resourceName] : []
+            del(params.id, resourceName, resourcesPaths[resourceName], uploadFields, resolve, reject)
             return
 
           case UPDATE:
