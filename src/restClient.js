@@ -35,48 +35,52 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
     firebase.initializeApp(firebaseConfig)
   }
 
-  trackedResources.map(resource => {
-    if (typeof resource === 'object') {
-      if (!resource.name) {
-        throw new Error(`name is missing from resource ${resource}`)
-      }
+  firebase.auth().onAuthStateChanged(function(user) {
+    if(user) {
+      trackedResources.map(resource => {
+        if (typeof resource === 'object') {
+          if (!resource.name) {
+            throw new Error(`name is missing from resource ${resource}`)
+          }
 
-      const path = resource.path || resource.name
-      const name = resource.name
+          const path = resource.path || resource.name
+          const name = resource.name
 
-      // Check path ends with name so the initial children can be loaded from on 'value' below.
-      const pattern = path.indexOf('/') >= 0 ? `/${name}$` : `${name}$`
-      if (!path.match(pattern)) {
-        throw new Error(`path ${path} must match ${pattern}`)
-      }
+          // Check path ends with name so the initial children can be loaded from on 'value' below.
+          const pattern = path.indexOf('/') >= 0 ? `/${name}$` : `${name}$`
+          if (!path.match(pattern)) {
+            throw new Error(`path ${path} must match ${pattern}`)
+          }
 
-      resourcesPaths[name] = path
-      resource = name
-    } else {
-      resourcesPaths[resource] = resource
-    }
+          resourcesPaths[name] = path
+          resource = name
+        } else {
+          resourcesPaths[resource] = resource
+        }
 
-    resourcesData[resource] = {}
-    resourcesStatus[resource] = new Promise(resolve => {
-      let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
+        resourcesData[resource] = {}
+        resourcesStatus[resource] = new Promise((resolve, reject) => {
+          let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
 
-      ref.on('value', function (childSnapshot) {
-        /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-        if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
-        Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
-        ref.on('child_added', function (childSnapshot) {
-          resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-          resourcesData[resource][childSnapshot.key].id = childSnapshot.key
+          ref.on('value', function (childSnapshot) {
+            /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
+            if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
+            Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
+            ref.on('child_added', function (childSnapshot) {
+              resourcesData[resource][childSnapshot.key] = childSnapshot.val()
+              resourcesData[resource][childSnapshot.key].id = childSnapshot.key
+            })
+            ref.on('child_removed', function (oldChildSnapshot) {
+              if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
+            })
+            ref.on('child_changed', function (childSnapshot) {
+              resourcesData[resource][childSnapshot.key] = childSnapshot.val()
+            })
+            resolve()
+          })
         })
-        ref.on('child_removed', function (oldChildSnapshot) {
-          if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
-        })
-        ref.on('child_changed', function (childSnapshot) {
-          resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-        })
-        resolve()
       })
-    })
+    }
   })
 
   /**
@@ -88,6 +92,9 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
 
   return (type, resource, params) => {
     return new Promise((resolve, reject) => {
+      if(!firebase.auth().currentUser) {
+        reject(new Error('Not login yet'));
+      }
       resourcesStatus[resource].then(() => {
         switch (type) {
           case GET_LIST:
@@ -119,15 +126,57 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
               }
 
               const filterKeys = Object.keys(filter)
+
               /* TODO Must have a better way */
               if (filterKeys.length) {
                 Object.values(resourcesData[resource]).map(value => {
+                  /**
+                  Nested matching between the filter and the object
+                  */
+
+                  var nestedMatch = function(filter, value) {
+                    var keys = Object.keys(filter);
+                    for(var i = 0; i < keys.length; i++) {
+                      var property = keys[i];
+                      var type = typeof(filter[property]);
+                      if (!(property in value)) {
+                        // console.log('Does not have key');
+                        return false;
+                      }
+                      if(typeof(filter[property]) !== typeof(value[property])){
+                        // console.log("Does not have same type", 
+                          // typeof(filter[property]), typeof(value[property]));
+                        return false;
+                      }
+                      if((type === "string" || type === "boolean") && value[property] !== filter[property]) {
+                        // console.log('Does not same value');
+                        return false;
+                      }
+                      if (type === "object") {
+                        if(!nestedMatch(filter[property], value[property])) {
+                          // console.log('Drilling down not match');
+                          return false;
+                        }
+                      }
+                    }
+                    return true;
+                  }
+
                   let filterIndex = 0
                   while (filterIndex < filterKeys.length) {
                     let property = filterKeys[filterIndex]
-                    if (property !== 'q' && value[property] !== filter[property]) {
-                      return
-                    } else if (property === 'q') {
+                    if (property !== 'q') {
+                      // console.log('Trying to match', filter[property]);
+                      var childFilter = {};
+                      childFilter[property] = filter[property];
+                      if(!nestedMatch(childFilter, value)) {
+                        return;
+                      }
+                      else{
+                        // console.log('Matched found');
+                      }
+                    }
+                    else if (property === 'q') {
                       if (JSON.stringify(value).indexOf(filter['q']) === -1) {
                         return
                       }
@@ -137,7 +186,12 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
                   values.push(value)
                 })
               } else {
-                values = Object.values(resourcesData[resource])
+                values = Object.values(resourcesData[resource]);
+              }
+
+              if(params.sort) {
+                const order = params.sort.order === 'ASC' ? false: true;
+                arraySort(values, params.sort.field, {reverse: order});
               }
 
               if(params.sort) {
