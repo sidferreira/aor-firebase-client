@@ -2,34 +2,25 @@
 import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest'
 import firebase from 'firebase'
 
-function firebaseAuthCheck (auth, resolve, reject) {
+const firebaseAuthCheck = async (auth, resolve, reject) => {
   if (auth) {
-    // TODO make it a parameter
-    firebase.database().ref('/users/' + auth.uid).once('value')
-    .then(function (snapshot) {
+    try {
+      // TODO make it a parameter
+      const snapshot = firebase.database().ref('/users/' + auth.uid).once('value')
       const profile = snapshot.val()
       // TODO make it a parameter
       if (profile && profile.isAdmin) {
-        auth.getIdToken().then((firebaseToken) => {
-          let user = {auth, profile, firebaseToken}
-
-          // TODO improve this! Save it on redux or something
-          localStorage.setItem('firebaseToken', firebaseToken)
-          resolve(user)
-        })
-        .catch(err => {
-          reject(err)
-        })
+        const firebaseToken = auth.getIdToken()
+        let user = {auth, profile, firebaseToken}
+        localStorage.setItem('firebaseToken', firebaseToken)
+        resolve(user)
       } else {
         firebase.auth().signOut()
         reject(new Error('Access Denied!'))
       }
-    })
-    .catch(err => {
-      reject(err)
-    })
-  } else {
-    reject(new Error('Login failed!'))
+    } catch (e) {
+      reject(e)
+    }
   }
 }
 
@@ -49,10 +40,9 @@ export default (type, params) => {
   if (type === AUTH_LOGIN) {
     const { username, password } = params
 
-    return new Promise((resolve, reject) => {
-      firebase.auth().signInWithEmailAndPassword(username, password)
-      .then(auth => firebaseAuthCheck(auth, resolve, reject))
-      .catch(e => reject(new Error('User not found')))
+    return new Promise(async (resolve, reject) => {
+      const auth = await firebase.auth().signInWithEmailAndPassword(username, password)
+      firebaseAuthCheck(auth, resolve, reject)
     })
   }
   return Promise.resolve()

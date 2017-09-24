@@ -83,15 +83,36 @@ export const methodGetItemID = (params, type, resourceName, resourcePath, resour
   return itemId
 }
 
+const addFirebaseListeners = async resource => {
+  let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
+
+  const childSnapshot = await ref.once('value')
+  /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
+  if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
+  Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
+  ref.on('child_added', function (childSnapshot) {
+    resourcesData[resource][childSnapshot.key] = childSnapshot.val()
+    resourcesData[resource][childSnapshot.key].id = childSnapshot.key
+  })
+  ref.on('child_removed', function (oldChildSnapshot) {
+    console.log('child_removed', resource, oldChildSnapshot.key)
+    if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
+  })
+  ref.on('child_changed', function (childSnapshot) {
+    resourcesData[resource][childSnapshot.key] = childSnapshot.val()
+  })
+  return true
+}
+
+/** TODO Move this to the Redux Store */
+const resourcesStatus = {}
+const resourcesReferences = {}
+const resourcesData = {}
+const resourcesPaths = {}
+const resourcesUploadFields = {}
+
 export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
   Object.assign(timestampFieldNames, options.timestampFieldNames)
-
-  /** TODO Move this to the Redux Store */
-  const resourcesStatus = {}
-  const resourcesReferences = {}
-  const resourcesData = {}
-  const resourcesPaths = {}
-  const resourcesUploadFields = {}
 
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig)
@@ -103,7 +124,7 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
   const del = options.methodUpload || methodUpload
   const getItemID = options.getItemID || methodGetItemID
 
-  trackedResources.map(resource => {
+  const initializeResource = resource => {
     if (typeof resource === 'object') {
       if (!resource.name) {
         throw new Error(`name is missing from resource ${resource}`)
@@ -126,31 +147,29 @@ export default (trackedResources = [], firebaseConfig = {}, options = {}) => {
       resourcesPaths[resource] = resource
     }
 
+    if (resource.secure && !firebase.currentUser) {
+      let ref = firebase.database().ref(resourcesPaths[resource])
+      ref.off('value')
+      ref.off('child_added')
+      ref.off('child_removed')
+      ref.off('child_changed')
+      resourcesData[resource] = null
+      resourcesStatus[resource] = null
+    }
+
+    if (resourcesData[resource]) {
+      return
+    }
+
     resourcesData[resource] = {}
-    resourcesStatus[resource] = new Promise(resolve => {
-      let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
+    resourcesStatus[resource] = addFirebaseListeners(resource)
 
-      ref.on('value', function (childSnapshot) {
-        /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-        if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
-        Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
-        ref.on('child_added', function (childSnapshot) {
-          resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-          resourcesData[resource][childSnapshot.key].id = childSnapshot.key
-        })
-        ref.on('child_removed', function (oldChildSnapshot) {
-          console.log('child_removed', resource, oldChildSnapshot.key)
-          if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
-        })
-        ref.on('child_changed', function (childSnapshot) {
-          resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-        })
-        resolve()
-      })
+    trackedResources.filter(resource => (!resource.secure)).map(initializeResource)
+
+    firebase.auth().onAuthStateChanged(user => {
+      trackedResources.filter(resource => (resource.secure)).map(initializeResource)
     })
-
-    return true
-  })
+  }
 
   /**
    * @param {string} type Request type, e.g GET_LIST
