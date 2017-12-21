@@ -14,7 +14,7 @@ import {
 /**
  * @param {string[]|Object[]} trackedResources Array of resource names or array of Objects containing name and
  * optional path properties (path defaults to name)
- * @param {Object} firebaseConfig Optiona Firebase configuration
+ * @param {Object} firebaseConfig Options Firebase configuration
  */
 
 const BaseConfiguration = {
