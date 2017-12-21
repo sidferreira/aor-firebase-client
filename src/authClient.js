@@ -7,7 +7,6 @@ const baseConfig = {
   userAdminProp: 'isAdmin',
   localStorageTokenName: 'aorFirebaseClientToken',
   handleAuthStateChange: async (auth, config) => {
-    console.log(`handleAuthStateChange`, auth)
     if (auth) {
       const snapshot = await firebase.database().ref(config.userProfilePath + auth.uid).once('value')
       const profile = snapshot.val()
