@@ -1,6 +1,6 @@
 {
   "name": "aor-firebase-client",
-  "version": "0.2.0-aplha.1",
+  "version": "0.2.0-alpha.5",
   "description": "Firebase Client for Admin On Rest",
   "main": "lib/index.js",
   "scripts": {
@@ -24,7 +24,8 @@
   ],
   "dependencies": {
     "firebase": "^4.10.1",
-    "react": "^15.6.1"
+    "react": "^15.6.1",
+    "sort-by": "^1.2.0"
   },
   "devDependencies": {
     "admin-on-rest": "^1.2.1",

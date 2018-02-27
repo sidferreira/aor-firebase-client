@@ -47,63 +47,70 @@ export default (firebaseConfig = {}, options = {}) => {
   const getOne = options.getOne || Methods.getOne
   const getMany = options.getMany || Methods.getMany
 
-  const initializeResource = resource => {
-    if (typeof resource === 'object') {
-      if (!resource.name) {
-        throw new Error(`name is missing from resource ${resource}`)
+  // Sanitize Resources
+  trackedResources.map((resource, index) => {
+    if (typeof resource === 'string') {
+      resource = {
+        name: resource,
+        path: resource,
+        uploadFields: []
       }
-
-      const name = resource.name
-      const path = resource.path || resource.name
-      const uploadFields = resource.uploadFields || []
-
-      // Check path ends with name so the initial children can be loaded from on 'value' below.
-      const pattern = path.indexOf('/') >= 0 ? `/${name}$` : `${name}$`
-      if (!path.match(pattern)) {
-        throw new Error(`path ${path} must match ${pattern}`)
-      }
-
-      resourcesUploadFields[name] = uploadFields
-      resourcesPaths[name] = path || name
-      resource = name
-    } else {
-      resourcesPaths[resource] = resource
+      trackedResources[index] = resource
     }
 
-    resourcesData[resource] = {}
-    resourcesStatus[resource] = new Promise(resolve => {
-      let ref = resourcesReferences[resource] = firebase.database().ref(resourcesPaths[resource])
+    const { name, path, uploadFields } = resource
 
-      ref.on('value', function (childSnapshot) {
-        /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-        if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
-        Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
-        resolve()
-      })
-      ref.on('child_added', function (childSnapshot) {
-        resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-        resourcesData[resource][childSnapshot.key].id = childSnapshot.key
-      })
+    if (!resource.name) {
+      throw new Error(`name is missing from resource ${resource}`)
+    }
+    resourcesUploadFields[name] = uploadFields || []
+    resourcesPaths[name] = path || name
+    resourcesData[name] = {}
+  })
 
-      ref.on('child_removed', function (oldChildSnapshot) {
-        console.log('child_removed', resource, oldChildSnapshot.key)
-        if (resourcesData[resource][oldChildSnapshot.key]) { delete resourcesData[resource][oldChildSnapshot.key] }
-      })
+  const initializeResource = ({name}, resolve) => {
+    let ref = resourcesReferences[name] = firebase.database().ref(resourcesPaths[name])
 
-      ref.on('child_changed', function (childSnapshot) {
-        resourcesData[resource][childSnapshot.key] = childSnapshot.val()
-      })
-
-      setTimeout(resolve, initialQuerytimeout)
+    ref.on('value', function (childSnapshot) {
+      /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
+      if (childSnapshot.key === name) { resourcesData[name] = childSnapshot.val() || [] }
+      Object.keys(resourcesData[name]).forEach(key => { resourcesData[name][key].id = key })
+      resolve()
     })
+    ref.on('child_added', function (childSnapshot) {
+      resourcesData[name][childSnapshot.key] = childSnapshot.val()
+      resourcesData[name][childSnapshot.key].id = childSnapshot.key
+    })
+
+    ref.on('child_removed', function (oldChildSnapshot) {
+      console.log('child_removed', name, oldChildSnapshot.key)
+      if (resourcesData[name][oldChildSnapshot.key]) { delete resourcesData[name][oldChildSnapshot.key] }
+    })
+
+    ref.on('child_changed', function (childSnapshot) {
+      resourcesData[name][childSnapshot.key] = childSnapshot.val()
+    })
+
+    setTimeout(resolve, initialQuerytimeout)
 
     return true
   }
 
   trackedResources.map(resource => {
-    if (resource.public) {
-      initializeResource(resource)
-    }
+    console.log(`1`, resource)
+    resourcesStatus[resource.name] = new Promise(resolve => {
+      if (resource.public) {
+        console.log(`initialize public`)
+        initializeResource(resource, resolve)
+      } else {
+        firebase.auth().onAuthStateChanged(auth => {
+          console.log(`initialize private`, resource)
+          if (auth) {
+            initializeResource(resource, resolve)
+          }
+        })
+      }
+    })
   })
 
   /**
