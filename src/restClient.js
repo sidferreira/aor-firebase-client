@@ -29,7 +29,6 @@ export default (firebaseConfig = {}, options = {}) => {
   options = Object.assign({}, BaseConfiguration, options)
   const { timestampFieldNames, trackedResources, initialQuerytimeout } = options
 
-  /** TODO Move this to the Redux Store */
   const resourcesStatus = {}
   const resourcesReferences = {}
   const resourcesData = {}
@@ -48,7 +47,7 @@ export default (firebaseConfig = {}, options = {}) => {
   const getOne = options.getOne || Methods.getOne
   const getMany = options.getMany || Methods.getMany
 
-  trackedResources.map(resource => {
+  const initializeResource = resource => {
     if (typeof resource === 'object') {
       if (!resource.name) {
         throw new Error(`name is missing from resource ${resource}`)
@@ -77,7 +76,6 @@ export default (firebaseConfig = {}, options = {}) => {
 
       ref.on('value', function (childSnapshot) {
         /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-        console.log(childSnapshot.val())
         if (childSnapshot.key === resource) { resourcesData[resource] = childSnapshot.val() || [] }
         Object.keys(resourcesData[resource]).forEach(key => { resourcesData[resource][key].id = key })
         resolve()
@@ -100,6 +98,12 @@ export default (firebaseConfig = {}, options = {}) => {
     })
 
     return true
+  }
+
+  trackedResources.map(resource => {
+    if (resource.public) {
+      initializeResource(resource)
+    }
   })
 
   /**
@@ -112,7 +116,6 @@ export default (firebaseConfig = {}, options = {}) => {
   return (type, resourceName, params) => {
     return new Promise((resolve, reject) => {
       resourcesStatus[resourceName].then(() => {
-        console.log(`Resource ${resourceName} got a ${type}`)
         switch (type) {
           case GET_LIST:
           case GET_MANY:

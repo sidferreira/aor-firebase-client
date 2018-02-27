@@ -1,4 +1,5 @@
 import firebase from 'firebase'
+import sortBy from 'sort-by'
 
 import {
   CREATE
@@ -148,6 +149,10 @@ export const getMany = (params, resourceName, resourceData, resolve, reject) => 
       })
     } else {
       values = Object.values(resourceData)
+    }
+
+    if (params.sort) {
+      values.sort(sortBy(`${params.sort.order === 'ASC' ? '-' : ''}${params.sort.field}`))
     }
 
     const keys = values.map(i => i.id)

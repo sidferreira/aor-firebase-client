@@ -18,18 +18,19 @@ const baseConfig = {
       } else {
         firebase.auth().signOut()
         localStorage.removeItem(config.localStorageTokenName)
-        throw new Error('Access Denied!')
+        throw new Error('sign_in_error')
       }
     } else {
       localStorage.removeItem(config.localStorageTokenName)
-      throw new Error('Access Denied!')
+      throw new Error('sign_in_error')
     }
   }
 }
 
 export default (config = {}) => {
-  config = Object.assign({}, baseConfig, config)
-  firebase.auth().onAuthStateChanged(auth => config.handleAuthStateChange(auth, config).catch(() => { }))
+  config = {...baseConfig, ...config}
+
+  firebase.auth().onAuthStateChanged(auth => config.handleAuthStateChange(auth, config).catch(() => {}))
 
   return async (type, params) => {
     if (type === AUTH_LOGOUT) {
@@ -43,7 +44,7 @@ export default (config = {}) => {
           if (firebase.auth().currentUser) {
             resolve(true)
           } else {
-            reject(new Error('User not found'))
+            reject(new Error('sign_in_error'))
           }
         }, timeout)
       })
