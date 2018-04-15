@@ -39,7 +39,7 @@ export default (config = {}) => {
     }
     if (type === AUTH_CHECK) {
       return new Promise((resolve, reject) => {
-        const timeout = (!firebase.auth().currentUser && localStorage.getItem(config.localStorageTokenName)) ? 1000 : 100
+        const timeout = (!firebase.auth().currentUser && localStorage.getItem(config.localStorageTokenName)) ? (process.env.NODE_ENV !== 'production' ? 4000 : 1000) : 100
         setTimeout(() => {
           if (firebase.auth().currentUser) {
             resolve(true)
