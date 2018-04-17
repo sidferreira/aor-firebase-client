@@ -30,7 +30,9 @@ const baseConfig = {
 export default (config = {}) => {
   config = {...baseConfig, ...config}
 
-  firebase.auth().onAuthStateChanged(auth => config.handleAuthStateChange(auth, config).catch(() => {}))
+  const firebaseLoaded = () => new Promise(resolve => {
+    firebase.auth().onAuthStateChanged(resolve)
+  })
 
   return async (type, params) => {
     if (type === AUTH_LOGOUT) {
@@ -38,16 +40,17 @@ export default (config = {}) => {
       return firebase.auth().signOut()
     }
     if (type === AUTH_CHECK) {
-      return new Promise((resolve, reject) => {
-        const timeout = (!firebase.auth().currentUser && localStorage.getItem(config.localStorageTokenName)) ? 1000 : 100
-        setTimeout(() => {
-          if (firebase.auth().currentUser) {
-            resolve(true)
-          } else {
-            reject(new Error('sign_in_error'))
-          }
-        }, timeout)
-      })
+      return async () => {
+        await firebaseLoaded()
+        if (firebase.auth().currentUser) {
+          await firebase.auth().currentUser.reload()
+        }
+
+        if (!firebase.auth().currentUser) {
+          throw new Error('sign_in_error')
+        }
+        return true
+      }
     }
     if (type === AUTH_LOGIN) {
       const { username, password } = params
