@@ -40,7 +40,7 @@ export const upload = async (fieldName, submitedData, id, resourceName, resource
   return false
 }
 
-export const save = async (id, data, previous, resourceName, resourcePath, resolve, reject, uploadResults, isNew, timestampFieldNames) => {
+export const save = async (id, data, previous, resourceName, resourcePath, firebaseSaveFilter, resolve, reject, uploadResults, isNew, timestampFieldNames) => {
   try {
     if (uploadResults) {
       uploadResults.map(result => result ? Object.assign(data, result) : false)
@@ -52,7 +52,7 @@ export const save = async (id, data, previous, resourceName, resourcePath, resol
 
     data = Object.assign(previous, { [timestampFieldNames.updatedAt]: Date.now() }, data)
 
-    await firebase.database().ref(`${resourcePath}/${id}`).update(data)
+    await firebase.database().ref(`${resourcePath}/${data.key || id}`).update(firebaseSaveFilter(data))
     resolve({ data: data })
     return data
   } catch (e) {
@@ -67,7 +67,7 @@ export const del = async (id, resourceName, resourcePath, uploadFields, resolve,
       uploadFields.map(fieldName =>
         firebase.storage().ref().child(`${resourcePath}/${id}/${fieldName}`).delete())
     }
-    console.log('Delete', `${resourcePath}/${id}`)
+
     await firebase.database().ref(`${resourcePath}/${id}`).remove()
     resolve({ data: id })
     return { data: id }

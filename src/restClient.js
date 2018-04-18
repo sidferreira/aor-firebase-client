@@ -47,6 +47,9 @@ export default (firebaseConfig = {}, options = {}) => {
   const getOne = options.getOne || Methods.getOne
   const getMany = options.getMany || Methods.getMany
 
+  const firebaseSaveFilter = options.firebaseSaveFilter ? options.firebaseSaveFilter : (data) => data
+  const firebaseGetFilter = options.firebaseGetFilter ? options.firebaseGetFilter : (data) => data
+
   // Sanitize Resources
   trackedResources.map((resource, index) => {
     if (typeof resource === 'string') {
@@ -71,19 +74,21 @@ export default (firebaseConfig = {}, options = {}) => {
   const initializeResource = ({name}, resolve) => {
     let ref = resourcesReferences[name] = firebase.database().ref(resourcesPaths[name])
 
-    ref.on('value', function (childSnapshot) {
+    ref.once('value', function (childSnapshot) {
       /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-      if (childSnapshot.key === name) { resourcesData[name] = childSnapshot.val() || [] }
+      if (childSnapshot.key === name) {
+        const entries = childSnapshot.val() || {}
+        resourcesData[name] = Object.keys(entries).map(key => firebaseGetFilter(entries[key], name))
+      }
       Object.keys(resourcesData[name]).forEach(key => { resourcesData[name][key].id = key })
       resolve()
     })
     ref.on('child_added', function (childSnapshot) {
-      resourcesData[name][childSnapshot.key] = childSnapshot.val()
+      resourcesData[name][childSnapshot.key] = firebaseGetFilter(childSnapshot.val(), name)
       resourcesData[name][childSnapshot.key].id = childSnapshot.key
     })
 
     ref.on('child_removed', function (oldChildSnapshot) {
-      console.log('child_removed', name, oldChildSnapshot.key)
       if (resourcesData[name][oldChildSnapshot.key]) { delete resourcesData[name][oldChildSnapshot.key] }
     })
 
@@ -97,14 +102,11 @@ export default (firebaseConfig = {}, options = {}) => {
   }
 
   trackedResources.map(resource => {
-    console.log(`1`, resource)
     resourcesStatus[resource.name] = new Promise(resolve => {
       if (resource.public) {
-        console.log(`initialize public`)
         initializeResource(resource, resolve)
       } else {
         firebase.auth().onAuthStateChanged(auth => {
-          console.log(`initialize private`, resource)
           if (auth) {
             initializeResource(resource, resolve)
           }
@@ -149,7 +151,7 @@ export default (firebaseConfig = {}, options = {}) => {
                 : []
               const currentData = resourcesData[resourceName][itemId] || {}
               Promise.all(uploads).then(uploadResults => {
-                save(itemId, params.data, currentData, resourceName, resourcesPaths[resourceName], resolve, reject, uploadResults, type === CREATE, timestampFieldNames)
+                save(itemId, params.data, currentData, resourceName, resourcesPaths[resourceName], firebaseSaveFilter, resolve, reject, uploadResults, type === CREATE, timestampFieldNames)
               })
             } catch (e) {
               reject(e)
