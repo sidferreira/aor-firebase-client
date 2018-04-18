@@ -20,7 +20,6 @@ npm install aor-firebase-client --save
 // in src/App.js
 import React from 'react';
 import { Admin, Resource } from 'admin-on-rest';
-import { PostList } from './posts';
 import { RestClient } from 'aor-firebase-client';
 
 const firebaseConfig = {
@@ -31,11 +30,23 @@ const firebaseConfig = {
     messagingSenderId: '<your-sender-id>'
 };
 
-const trackedResources = ['posts']
+const clientOptions = {
+  timestampFieldNames: {
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  },
+  trackedResources: [{
+    name: 'posts', // The name reference to be used in all other places in AOR
+    path: 'blog', // The path in the database. If missing will use the name
+    public: true,
+    uploadFields: [] // The string name of the field
+  }, 'contacts'] // A single string assumes path and name as equal, non private and without upload fields
+}
 
 const App = () => (
-    <Admin restClient={RestClient(trackedResources, firebaseConfig)} >
+    <Admin restClient={RestClient(trackedResources, clientOptions)} >
         <Resource name="posts" list={PostList} />
+        <Resource name="contacts" list={ContactList} />
     </Admin>
 );
 
@@ -45,16 +56,17 @@ export default App;
 ### Auth Client
 The package lets you manage the login/logout process implementing an optional `authClient` prop of the `Admin` component [(see documentation)](https://marmelab.com/admin-on-rest/Authentication.html).  
 It stores a `firebaseToken` in  `localStorage`.
+The configuration options available are:
 
-This requires a `users` resource relative to the root, with the user IDs as the children and an `isAdmin` boolean value.
+- `userProfilePath`: The database path to user profiles. Defaults to `/users/`. Mind the slashes.
 
-```
-app-name
-+- users
-   +- USERID-FROM-FIREBASE-AUTH
-      +- isAdmin: true
-```
+- `userAdminProp`: The database key to point if a user has admin powers. Defaults to `isAdmin`
 
+The final path is: `{userProfilePath}/{uid}/{userAdminProp}`
+
+- `localStorageTokenName`: Local storage identifier to hold the firebase client token, defaults to `aorFirebaseClientToken`
+
+- `handleAuthStateChange`: A way to override the auth process
 
 ```js
 // in src/App.js
@@ -69,8 +81,13 @@ const firebaseConfig = {
     messagingSenderId: '<your-sender-id>'
 };
 
+const authConfig = {
+    userProfilePath: 'profiles',
+    userAdminProp: 'superuser'
+}
+
 const App = () => (
-    <Admin restClient={RestClient(firebaseConfig)} authClient={AuthClient}>
+    <Admin restClient={RestClient(firebaseConfig)} authClient={AuthClient(authConfig)}>
         <Resource name="posts" list={PostList} />
     </Admin>
 );
@@ -95,7 +112,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 const App = () => (
-    <Admin authClient={AuthClient}>
+    <Admin authClient={AuthClient()}>
         <Resource name="posts" list={PostList} />
     </Admin>
 );

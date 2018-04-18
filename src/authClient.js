@@ -2,58 +2,61 @@
 import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest'
 import firebase from 'firebase'
 
-function firebaseAuthCheck (auth, resolve, reject) {
-  if (auth) {
-    // TODO make it a parameter
-    firebase.database().ref('/users/' + auth.uid).once('value')
-    .then(function (snapshot) {
+const baseConfig = {
+  userProfilePath: '/users/',
+  userAdminProp: 'isAdmin',
+  localStorageTokenName: 'aorFirebaseClientToken',
+  handleAuthStateChange: async (auth, config) => {
+    if (auth) {
+      const snapshot = await firebase.database().ref(config.userProfilePath + auth.uid).once('value')
       const profile = snapshot.val()
-      // TODO make it a parameter
-      if (profile && profile.isAdmin) {
-        auth.getIdToken().then((firebaseToken) => {
-          let user = {auth, profile, firebaseToken}
-
-          // TODO improve this! Save it on redux or something
-          localStorage.setItem('firebaseToken', firebaseToken)
-          resolve(user)
-        })
-        .catch(err => {
-          reject(err)
-        })
+      if (profile && profile[config.userAdminProp]) {
+        const firebaseToken = auth.getIdToken()
+        let user = { auth, profile, firebaseToken }
+        localStorage.setItem(config.localStorageTokenName, firebaseToken)
+        return user
       } else {
         firebase.auth().signOut()
-        reject(new Error('Access Denied!'))
+        localStorage.removeItem(config.localStorageTokenName)
+        throw new Error('sign_in_error')
       }
-    })
-    .catch(err => {
-      reject(err)
-    })
-  } else {
-    reject(new Error('Login failed!'))
+    } else {
+      localStorage.removeItem(config.localStorageTokenName)
+      throw new Error('sign_in_error')
+    }
   }
 }
 
-export default (type, params) => {
-  if (type === AUTH_LOGOUT) {
-    return firebase.auth().signOut()
-  }
-  if (type === AUTH_CHECK) {
-    return new Promise((resolve, reject) => {
-      if (firebase.auth().currentUser) {
-        resolve()
-      } else {
-        reject(new Error('User not found'))
-      }
-    })
-  }
-  if (type === AUTH_LOGIN) {
-    const { username, password } = params
+export default (config = {}) => {
+  config = {...baseConfig, ...config}
 
-    return new Promise((resolve, reject) => {
-      firebase.auth().signInWithEmailAndPassword(username, password)
-      .then(auth => firebaseAuthCheck(auth, resolve, reject))
-      .catch(e => reject(new Error('User not found')))
-    })
+  const firebaseLoaded = () => new Promise(resolve => {
+    firebase.auth().onAuthStateChanged(resolve)
+  })
+
+  return async (type, params) => {
+    if (type === AUTH_LOGOUT) {
+      config.handleAuthStateChange(null, config).catch(() => { })
+      return firebase.auth().signOut()
+    }
+    if (type === AUTH_CHECK) {
+      return async () => {
+        await firebaseLoaded()
+        if (firebase.auth().currentUser) {
+          await firebase.auth().currentUser.reload()
+        }
+
+        if (!firebase.auth().currentUser) {
+          throw new Error('sign_in_error')
+        }
+        return true
+      }
+    }
+    if (type === AUTH_LOGIN) {
+      const { username, password } = params
+      const auth = await firebase.auth().signInWithEmailAndPassword(username, password)
+      return config.handleAuthStateChange(auth, config)
+    }
+    return true
   }
-  return Promise.resolve()
 }

@@ -1,6 +1,6 @@
 {
   "name": "aor-firebase-client",
-  "version": "0.0.10",
+  "version": "0.2.0-alpha.7",
   "description": "Firebase Client for Admin On Rest",
   "main": "lib/index.js",
   "scripts": {
@@ -27,16 +27,25 @@
     "rest"
   ],
   "dependencies": {
-    "array-sort": "^0.1.4",
-    "firebase": "^4.1.3",
-    "react": "^15.6.1"
+    "firebase": "^4.10.1",
+    "react": "^15.6.1",
+    "sort-by": "^1.2.0"
   },
   "devDependencies": {
     "admin-on-rest": "^1.2.1",
     "babel-cli": "^6.24.1",
     "babel-jest": "^20.0.3",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-react": "^6.24.1",
+    "eslint": "^4.7.1",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-config-standard-jsx": "^4.0.2",
+    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-node": "^5.1.1",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-react": "^7.3.0",
+    "eslint-plugin-standard": "^3.0.1",
     "jest": "^20.0.4",
     "jest-cli": "^20.0.4",
     "jest-localstorage-mock": "^1.2.0",
