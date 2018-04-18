@@ -5,8 +5,21 @@ import {
   CREATE
 } from 'admin-on-rest'
 
+const getImageSize = (file) => {
+  return new Promise(resolve => {
+    const img = document.createElement('img')
+    img.onload = function () {
+      resolve({
+        width: this.width,
+        height: this.height
+      })
+    }
+    img.src = file.src
+  })
+}
+
 export const upload = async (fieldName, submitedData, id, resourceName, resourcePath) => {
-  const file = submitedData[fieldName] ? submitedData[fieldName][0] : {}
+  const file = submitedData[fieldName] && submitedData[fieldName][0]
   const rawFile = file.rawFile
 
   const result = {}
@@ -19,16 +32,7 @@ export const upload = async (fieldName, submitedData, id, resourceName, resource
     result[fieldName][0].type = rawFile.type
     if (rawFile.type.indexOf('image/') === 0) {
       try {
-        const imageSize = await new Promise((resolve) => {
-          const img = document.createElement('img')
-          img.onload = function () {
-            resolve({
-              width: this.width,
-              height: this.height
-            })
-          }
-          img.src = file.src
-        })
+        const imageSize = await getImageSize(file)
         result[fieldName][0].width = imageSize.width
         result[fieldName][0].height = imageSize.height
       } catch (e) {
@@ -40,69 +44,67 @@ export const upload = async (fieldName, submitedData, id, resourceName, resource
   return false
 }
 
-export const save = async (id, data, previous, resourceName, resourcePath, firebaseSaveFilter, resolve, reject, uploadResults, isNew, timestampFieldNames) => {
-  try {
-    if (uploadResults) {
-      uploadResults.map(result => result ? Object.assign(data, result) : false)
-    }
-
-    if (isNew) {
-      Object.assign(data, { [timestampFieldNames.createdAt]: Date.now() })
-    }
-
-    data = Object.assign(previous, { [timestampFieldNames.updatedAt]: Date.now() }, data)
-
-    await firebase.database().ref(`${resourcePath}/${data.key || id}`).update(firebaseSaveFilter(data))
-    resolve({ data: data })
-    return data
-  } catch (e) {
-    reject(e)
+export const save = async (id, data, previous, resourceName, resourcePath, firebaseSaveFilter, uploadResults, isNew, timestampFieldNames) => {
+  if (uploadResults) {
+    uploadResults.map(uploadResult => uploadResult ? Object.assign(data, uploadResult) : false)
   }
-  return false
+
+  if (isNew) {
+    Object.assign(data, { [timestampFieldNames.createdAt]: Date.now() })
+  }
+
+  data = Object.assign(previous, { [timestampFieldNames.updatedAt]: Date.now() }, data)
+
+  if (!data.key) {
+    data.key = id
+  }
+  if (!data.id) {
+    data.id = id
+  }
+
+  await firebase.database().ref(`${resourcePath}/${data.key}`).update(firebaseSaveFilter(data))
+  return { data }
 }
 
-export const del = async (id, resourceName, resourcePath, uploadFields, resolve, reject) => {
-  try {
-    if (uploadFields.length) {
-      uploadFields.map(fieldName =>
-        firebase.storage().ref().child(`${resourcePath}/${id}/${fieldName}`).delete())
-    }
-
-    await firebase.database().ref(`${resourcePath}/${id}`).remove()
-    resolve({ data: id })
-    return { data: id }
-  } catch (e) {
-    reject(e)
+export const del = async (id, resourceName, resourcePath, uploadFields) => {
+  if (uploadFields.length) {
+    uploadFields.map(fieldName =>
+      firebase.storage().ref().child(`${resourcePath}/${id}/${fieldName}`).delete())
   }
-  return false
+
+  await firebase.database().ref(`${resourcePath}/${id}`).remove()
+  return { data: id }
 }
 
-export const getItemID = (params, type, resourceName, resourcePath, resourceData, resolve, reject) => {
-  let itemId = params.data.id || params.id
+export const getItemID = (params, type, resourceName, resourcePath, resourceData) => {
+  let itemId = params.data.id || params.id || params.data.key || params.key
   if (!itemId) {
     itemId = firebase.database().ref().child(resourcePath).push().key
   }
+
   if (!itemId) {
-    reject(new Error('ID is required'))
-    return 0
+    throw new Error('ID is required')
   }
+
   if (resourceData && resourceData[itemId] && type === CREATE) {
-    reject(new Error('ID already in use'))
-    return
+    throw new Error('ID already in use')
   }
+
   return itemId
 }
 
-export const getOne = (params, resourceName, resourceData, resolve, reject) => {
-  const key = params.id
-  if (key && resourceData[key]) {
-    resolve({ data: resourceData[key] })
+export const getOne = (params, resourceName, resourceData) => {
+  console.log(`params`, params)
+  console.log(`resourceData`, resourceData)
+  console.log(`resourceData[params.id]`, resourceData[params.id])
+  if (params.id && resourceData[params.id]) {
+    return { data: resourceData[params.id] }
   } else {
-    reject(new Error('Key not found'))
+    throw new Error('Key not found')
   }
 }
 
-export const getMany = (params, resourceName, resourceData, resolve, reject) => {
+export const getMany = (params, resourceName, resourceData) => {
   let ids = []
   let data = []
   let total = 0
@@ -162,8 +164,8 @@ export const getMany = (params, resourceName, resourceData, resolve, reject) => 
     data = values.slice(_start, _end)
     ids = keys.slice(_start, _end)
     total = values.length
+    return { data, ids, total }
   } else {
-    reject(new Error('Error processing request'))
+    throw new Error('Error processing request')
   }
-  resolve({ data, ids, total })
 }
