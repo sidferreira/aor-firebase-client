@@ -18,7 +18,7 @@ const getImageSize = (file) => {
   })
 }
 
-export const upload = async (fieldName, submitedData, id, resourceName, resourcePath) => {
+const upload = async (fieldName, submitedData, id, resourceName, resourcePath) => {
   const file = submitedData[fieldName] && submitedData[fieldName][0]
   const rawFile = file.rawFile
 
@@ -44,7 +44,7 @@ export const upload = async (fieldName, submitedData, id, resourceName, resource
   return false
 }
 
-export const save = async (id, data, previous, resourceName, resourcePath, firebaseSaveFilter, uploadResults, isNew, timestampFieldNames) => {
+const save = async (id, data, previous, resourceName, resourcePath, firebaseSaveFilter, uploadResults, isNew, timestampFieldNames) => {
   if (uploadResults) {
     uploadResults.map(uploadResult => uploadResult ? Object.assign(data, uploadResult) : false)
   }
@@ -66,7 +66,7 @@ export const save = async (id, data, previous, resourceName, resourcePath, fireb
   return { data }
 }
 
-export const del = async (id, resourceName, resourcePath, uploadFields) => {
+const del = async (id, resourceName, resourcePath, uploadFields) => {
   if (uploadFields.length) {
     uploadFields.map(fieldName =>
       firebase.storage().ref().child(`${resourcePath}/${id}/${fieldName}`).delete())
@@ -76,7 +76,7 @@ export const del = async (id, resourceName, resourcePath, uploadFields) => {
   return { data: id }
 }
 
-export const getItemID = (params, type, resourceName, resourcePath, resourceData) => {
+const getItemID = (params, type, resourceName, resourcePath, resourceData) => {
   let itemId = params.data.id || params.id || params.data.key || params.key
   if (!itemId) {
     itemId = firebase.database().ref().child(resourcePath).push().key
@@ -93,10 +93,7 @@ export const getItemID = (params, type, resourceName, resourcePath, resourceData
   return itemId
 }
 
-export const getOne = (params, resourceName, resourceData) => {
-  console.log(`params`, params)
-  console.log(`resourceData`, resourceData)
-  console.log(`resourceData[params.id]`, resourceData[params.id])
+const getOne = (params, resourceName, resourceData) => {
   if (params.id && resourceData[params.id]) {
     return { data: resourceData[params.id] }
   } else {
@@ -104,7 +101,7 @@ export const getOne = (params, resourceName, resourceData) => {
   }
 }
 
-export const getMany = (params, resourceName, resourceData) => {
+const getMany = (params, resourceName, resourceData) => {
   let ids = []
   let data = []
   let total = 0
@@ -168,4 +165,13 @@ export const getMany = (params, resourceName, resourceData) => {
   } else {
     throw new Error('Error processing request')
   }
+}
+
+export default {
+  upload,
+  save,
+  del,
+  getItemID,
+  getOne,
+  getMany
 }

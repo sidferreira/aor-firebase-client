@@ -1,5 +1,5 @@
 import firebase from 'firebase'
-import * as Methods from './methods'
+import Methods from './methods'
 
 import {
   GET_LIST,
