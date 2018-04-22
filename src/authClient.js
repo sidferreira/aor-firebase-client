@@ -7,6 +7,7 @@ const baseConfig = {
   userAdminProp: 'isAdmin',
   localStorageTokenName: 'aorFirebaseClientToken',
   handleAuthStateChange: async (auth, config) => {
+    console.log(`auth`, auth)
     if (auth) {
       const snapshot = await firebase.database().ref(config.userProfilePath + auth.uid).once('value')
       const profile = snapshot.val()
@@ -46,15 +47,15 @@ export default (config = {}) => {
     }
 
     if (type === AUTH_CHECK) {
-      return async () => {
-        await firebaseLoaded()
+      await firebaseLoaded()
 
-        if (!firebase.auth().currentUser) {
-          throw new Error('sign_in_error')
-        }
-        return true
+      if (!firebase.auth().currentUser) {
+        throw new Error('sign_in_error')
       }
+
+      return true
     }
+
     if (type === AUTH_LOGIN) {
       const { username, password, alreadySignedIn } = params
       let auth = firebase.auth().currentUser
@@ -65,6 +66,7 @@ export default (config = {}) => {
 
       return config.handleAuthStateChange(auth, config)
     }
-    return true
+
+    return false
   }
 }

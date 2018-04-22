@@ -1,14 +1,10 @@
 {
-  "presets": [
-    "es2015",
-    "stage-0"
-  ],
+  "presets": [["es2015", { "modules": false }], "stage-3"],
   "plugins": [
-    "add-module-exports",
+    "transform-object-rest-spread",
     ["transform-runtime", {
       "polyfill": false,
       "regenerator": true
-    }],
-    "transform-object-rest-spread"
+    }]
   ]
 }
