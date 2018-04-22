@@ -1,5 +1,5 @@
 /* globals localStorage */
-import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from 'admin-on-rest'
+import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from './reference'
 import firebase from 'firebase'
 
 const baseConfig = {
@@ -10,6 +10,7 @@ const baseConfig = {
     if (auth) {
       const snapshot = await firebase.database().ref(config.userProfilePath + auth.uid).once('value')
       const profile = snapshot.val()
+
       if (profile && profile[config.userAdminProp]) {
         const firebaseToken = auth.getIdToken()
         let user = { auth, profile, firebaseToken }
@@ -39,12 +40,14 @@ export default (config = {}) => {
       config.handleAuthStateChange(null, config).catch(() => { })
       return firebase.auth().signOut()
     }
+
+    if (firebase.auth().currentUser) {
+      await firebase.auth().currentUser.reload()
+    }
+
     if (type === AUTH_CHECK) {
       return async () => {
         await firebaseLoaded()
-        if (firebase.auth().currentUser) {
-          await firebase.auth().currentUser.reload()
-        }
 
         if (!firebase.auth().currentUser) {
           throw new Error('sign_in_error')
@@ -53,8 +56,13 @@ export default (config = {}) => {
       }
     }
     if (type === AUTH_LOGIN) {
-      const { username, password } = params
-      const auth = await firebase.auth().signInWithEmailAndPassword(username, password)
+      const { username, password, alreadySignedIn } = params
+      let auth = firebase.auth().currentUser
+
+      if (!auth || !alreadySignedIn) {
+        auth = await firebase.auth().signInWithEmailAndPassword(username, password)
+      }
+
       return config.handleAuthStateChange(auth, config)
     }
     return true

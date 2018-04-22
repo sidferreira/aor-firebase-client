@@ -27,12 +27,14 @@
     "rest"
   ],
   "dependencies": {
-    "firebase": "^4.10.1",
-    "react": "^15.6.1",
+    "@firebase/app-types": "0.x",
+    "firebase": "^4.13.1",
+    "react": "^15.6.2",
+    "react-dom": "^15.6.1",
     "sort-by": "^1.2.0"
   },
   "devDependencies": {
-    "admin-on-rest": "^1.2.1",
+    "admin-on-rest": "^1.4.1",
     "babel-cli": "^6.24.1",
     "babel-jest": "^20.0.3",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",

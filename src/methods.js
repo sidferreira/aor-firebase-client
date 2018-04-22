@@ -3,7 +3,7 @@ import sortBy from 'sort-by'
 
 import {
   CREATE
-} from 'admin-on-rest'
+} from './reference'
 
 const getImageSize = (file) => {
   return new Promise(resolve => {

@@ -9,7 +9,7 @@ import {
   CREATE,
   UPDATE,
   DELETE
-} from 'admin-on-rest'
+} from './reference'
 
 /**
  * @param {string[]|Object[]} trackedResources Array of resource names or array of Objects containing name and
@@ -35,6 +35,7 @@ export default (firebaseConfig = {}, options = {}) => {
   const resourcesPaths = {}
   const resourcesUploadFields = {}
 
+  console.log(`firebase`, firebase)
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig)
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION)
@@ -93,7 +94,6 @@ export default (firebaseConfig = {}, options = {}) => {
 
   const subscribeResource = (ref, name, resolve) => {
     ref.once('value', function (childSnapshot) {
-      console.log(`once`)
       /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
       if (childSnapshot.key === name) {
         const entries = childSnapshot.val() || {}
@@ -112,16 +112,13 @@ export default (firebaseConfig = {}, options = {}) => {
         id: childSnapshot.key,
         key: childSnapshot.key
       }, childSnapshot.val()), name)
-      console.log(`child_added`, resourcesData[name][childSnapshot.key])
     })
 
     ref.on('child_removed', function (oldChildSnapshot) {
-      console.log(`child_removed`)
       if (resourcesData[name][oldChildSnapshot.key]) { delete resourcesData[name][oldChildSnapshot.key] }
     })
 
     ref.on('child_changed', function (childSnapshot) {
-      console.log(`child_changed`)
       resourcesData[name][childSnapshot.key] = childSnapshot.val()
     })
   }
@@ -141,15 +138,12 @@ export default (firebaseConfig = {}, options = {}) => {
 
   return async (type, resourceName, params) => {
     await resourcesStatus[resourceName]
-    console.log(`type`, type)
     let result = null
     switch (type) {
       case GET_LIST:
       case GET_MANY:
       case GET_MANY_REFERENCE:
-        console.log(`getMany`)
         result = await getMany(params, resourceName, resourcesData[resourceName])
-        console.log(`result`, result)
         return result
 
       case GET_ONE:
