@@ -2,7 +2,7 @@
   "presets": [[
     "env", {
       "targets": {
-        "node": "current"
+        "browsers": ["cover 99.5%"]
       }
     }
   ], "react"],
