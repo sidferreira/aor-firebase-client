@@ -35,7 +35,6 @@ export default (firebaseConfig = {}, options = {}) => {
   const resourcesPaths = {}
   const resourcesUploadFields = {}
 
-  console.log(`firebase`, firebase)
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig)
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION)
