@@ -2,7 +2,7 @@
   "presets": [[
     "env", {
       "targets": {
-        "browsers": ["cover 99.5%"]
+        "browsers": ["chrome 60"]
       }
     }
   ], "react"],
