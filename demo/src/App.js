@@ -14,12 +14,18 @@ const firebaseConfig = {
   messagingSenderId: '1092760245154'
 }
 
-const trackedResources = ['posts', 'profiles']
+const trackedResources = [{
+  name: 'posts',
+  isPublic: true
+}, {
+  name: 'profiles',
+  isPublic: true
+}]
 
 const shouldUseAuth = !(window && window.location && window.location.search && window.location.search === '?security=0')
 
 const App = () => (
-  <Admin restClient={RestClient(trackedResources, firebaseConfig)} authClient={shouldUseAuth ? AuthClient : null} >
+  <Admin restClient={RestClient(firebaseConfig, {trackedResources})} authClient={shouldUseAuth ? AuthClient : null} >
         <Resource name="posts" list={PostList} edit={PostEdit} create={PostCreate} remove={Delete} />
         <Resource name="profiles" list={UserList} />
   </Admin>
