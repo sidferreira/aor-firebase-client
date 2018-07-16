@@ -116,6 +116,8 @@ const getMany = (params, resourceName, resourceData) => {
       }
       return total
     })
+
+
   } else if (params.pagination) {
     /** GET_LIST / GET_MANY_REFERENCE */
     let values = []
@@ -161,10 +163,11 @@ const getMany = (params, resourceName, resourceData) => {
     data = values.slice(_start, _end)
     ids = keys.slice(_start, _end)
     total = values.length
-    return { data, ids, total }
   } else {
     throw new Error('Error processing request')
   }
+
+  return { data, ids, total }
 }
 
 export default {
