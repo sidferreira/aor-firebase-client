@@ -73,7 +73,7 @@ const del = async (id, resourceName, resourcePath, uploadFields) => {
   }
 
   await firebase.database().ref(`${resourcePath}/${id}`).remove()
-  return { data: id }
+  return { data: { id } }
 }
 
 const getItemID = (params, type, resourceName, resourcePath, resourceData) => {
@@ -116,6 +116,7 @@ const getMany = (params, resourceName, resourceData) => {
       }
       return total
     })
+    return { data: data, ids: ids, total: total };
   } else if (params.pagination) {
     /** GET_LIST / GET_MANY_REFERENCE */
     let values = []
