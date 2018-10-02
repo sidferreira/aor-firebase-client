@@ -1,5 +1,6 @@
-import firebase from 'firebase'
-import Methods from './methods'
+import firebase from 'firebase/app'
+import 'firebase/auth'
+import DefaultMethods from './methods'
 
 import {
   GET_LIST,
@@ -9,7 +10,7 @@ import {
   CREATE,
   UPDATE,
   DELETE
-} from './reference'
+} from 'admin-on-rest'
 
 /**
  * @param {string[]|Object[]} trackedResources Array of resource names or array of Objects containing name and
@@ -18,115 +19,111 @@ import {
  */
 
 const BaseConfiguration = {
-  initialQuerytimeout: 10000,
+  initialQueryTimeout: 1000,
   timestampFieldNames: {
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
-  }
+  },
+  firebasePersistence: firebase.auth.Auth.Persistence.SESSION,
 }
 
-export default (firebaseConfig = {}, options = {}) => {
-  options = Object.assign({}, BaseConfiguration, options)
-  const { timestampFieldNames, trackedResources, initialQuerytimeout } = options
+const resourcesStatus = {}
+const resourcesReferences = {}
+const resourcesData = {}
+const resourcesPaths = {}
+const resourcesUploadFields = {}
+const globalMethods = {}
 
-  const resourcesStatus = {}
-  const resourcesReferences = {}
-  const resourcesData = {}
-  const resourcesPaths = {}
-  const resourcesUploadFields = {}
+const initializeResource = async ({name, isPublic}, initialQueryTimeout) => {
+  let ref = resourcesReferences[name] = firebase.database().ref(resourcesPaths[name])
+  resourcesData[name] = []
+
+  if (isPublic) {
+    await subscribeResource(ref, name);
+  } else {
+    firebase.auth().onAuthStateChanged(auth => {
+      if (auth) {
+        subscribeResource(ref, name)
+      }
+    })
+  }
+
+  await new Promise(r => {
+    setTimeout(r, initialQueryTimeout);
+  })
+}
+
+const sanitizeResource = (resource, index) => {
+  if (typeof resource === 'string') {
+    resource = {
+      name: resource,
+      isPublic: true
+    }
+  }
+
+  const { name, path, uploadFields } = resource;
+
+  if (!resource.name) {
+    throw new Error(`name is missing from resource ${resource}`)
+  }
+
+  resourcesUploadFields[name] = uploadFields || [];
+  resourcesPaths[name] = path || '/' + name;
+  resourcesData[name] = {};
+
+  return resource;
+}
+
+const subscribeResource = async (ref, name, resolve) => {
+  const snapshot = await ref.orderByKey().once('value');
+  const entries = snapshot.val() || {};
+
+  let lastId = "";
+
+  Object.keys(entries).map(id => {
+    resourcesData[name][id] = globalMethods.postRead({...entries[id], id}, id, name);
+    lastId = id;
+  });
+
+  ref.orderByKey().startAt(lastId).on('child_added', childSnapshot => {
+    const id = childSnapshot.key;
+    console.log(`child_added`, id);
+    resourcesData[name][id] = globalMethods.postRead({...childSnapshot.val(), id}, id, name);
+  });
+
+  ref.on('child_changed', childSnapshot => {
+    const id = childSnapshot.key;
+    resourcesData[name][id] = globalMethods.postRead({...childSnapshot.val(), id}, id, name);
+  });
+
+  ref.on('child_removed', oldChildSnapshot => {
+    const id = oldChildSnapshot.key;
+    console.log(`child_removed`, id);
+    delete resourcesData[name][id];
+  });
+};
+
+export default ({firebaseConfig, trackedResources, options}) => {
+  options = Object.assign({}, BaseConfiguration, (options || {}))
+  const { timestampFieldNames, initialQueryTimeout } = options;
 
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig)
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION)
+    firebase.auth().setPersistence(options.firebasePersistence);
   }
 
-  /* Functions */
-  const upload = options.upload || Methods.upload
-  const save = options.save || Methods.save
-  const del = options.del || Methods.del
-  const getItemID = options.getItemID || Methods.getItemID
-  const getOne = options.getOne || Methods.getOne
-  const getMany = options.getMany || Methods.getMany
+  /* InternalMethods */
+  const methods = Object.assign({}, DefaultMethods, (options.methods || {}));
 
-  const firebaseSaveFilter = options.firebaseSaveFilter ? options.firebaseSaveFilter : (data) => data
-  const firebaseGetFilter = options.firebaseGetFilter ? options.firebaseGetFilter : (data) => data
+  globalMethods.preSave = methods.preSave;
+  globalMethods.postRead = methods.postRead;
 
   // Sanitize Resources
   trackedResources.map((resource, index) => {
-    if (typeof resource === 'string') {
-      resource = {
-        name: resource,
-        path: resource,
-        uploadFields: []
-      }
-      trackedResources[index] = resource
-    }
+    resource = sanitizeResource(resource);
 
-    const { name, path, uploadFields } = resource
-
-    if (!resource.name) {
-      throw new Error(`name is missing from resource ${resource}`)
-    }
-    resourcesUploadFields[name] = uploadFields || []
-    resourcesPaths[name] = path || name
-    resourcesData[name] = {}
-  })
-
-  const initializeResource = ({name, isPublic}, resolve) => {
-    let ref = resourcesReferences[name] = firebase.database().ref(resourcesPaths[name])
-    resourcesData[name] = []
-
-    if (isPublic) {
-      subscribeResource(ref, name, resolve)
-    } else {
-      firebase.auth().onAuthStateChanged(auth => {
-        if (auth) {
-          subscribeResource(ref, name, resolve)
-        }
-      })
-    }
-
-    setTimeout(resolve, initialQuerytimeout)
-
-    return true
-  }
-
-  const subscribeResource = (ref, name, resolve) => {
-    ref.once('value', function (childSnapshot) {
-      /** Uses "value" to fetch initial data. Avoid the AOR to show no results */
-      if (childSnapshot.key === name) {
-        const entries = childSnapshot.val() || {}
-        Object.keys(entries).map(key => {
-          resourcesData[name][key] = firebaseGetFilter(entries[key], name)
-        })
-        Object.keys(resourcesData[name]).forEach(itemKey => {
-          resourcesData[name][itemKey].id = itemKey
-          resourcesData[name][itemKey].key = itemKey
-        })
-        resolve()
-      }
-    })
-    ref.on('child_added', function (childSnapshot) {
-      resourcesData[name][childSnapshot.key] = firebaseGetFilter(Object.assign({}, {
-        id: childSnapshot.key,
-        key: childSnapshot.key
-      }, childSnapshot.val()), name)
-    })
-
-    ref.on('child_removed', function (oldChildSnapshot) {
-      if (resourcesData[name][oldChildSnapshot.key]) { delete resourcesData[name][oldChildSnapshot.key] }
-    })
-
-    ref.on('child_changed', function (childSnapshot) {
-      resourcesData[name][childSnapshot.key] = childSnapshot.val()
-    })
-  }
-
-  trackedResources.map(resource => {
-    resourcesStatus[resource.name] = new Promise(resolve => {
-      initializeResource(resource, resolve)
-    })
-  })
+    resourcesStatus[resource.name] = initializeResource(resource, initialQueryTimeout);
+  });
 
   /**
    * @param {string} type Request type, e.g GET_LIST
@@ -136,34 +133,36 @@ export default (firebaseConfig = {}, options = {}) => {
    */
 
   return async (type, resourceName, params) => {
-    await resourcesStatus[resourceName]
+    await resourcesStatus[resourceName];
     let result = null
+    console.log(`${resourceName} => ${type}`);
     switch (type) {
       case GET_LIST:
       case GET_MANY:
       case GET_MANY_REFERENCE:
-        result = await getMany(params, resourceName, resourcesData[resourceName])
-        return result
+        result = await methods.getMany(params, resourcesData[resourceName], type);
+        return result;
 
       case GET_ONE:
-        result = await getOne(params, resourceName, resourcesData[resourceName])
-        return result
+        return methods.getOne(params, resourcesData[resourceName]);
 
       case DELETE:
-        const uploadFields = resourcesUploadFields[resourceName] ? resourcesUploadFields[resourceName] : []
-        result = await del(params.id, resourceName, resourcesPaths[resourceName], uploadFields)
+        const uploadFields = []; //resourcesUploadFields[resourceName] ? resourcesUploadFields[resourceName] : []
+        result = await methods.del(params, resourcesPaths[resourceName], uploadFields)
         return result
 
       case UPDATE:
       case CREATE:
-        let itemId = getItemID(params, type, resourceName, resourcesPaths[resourceName], resourcesData[resourceName])
-        const uploads = resourcesUploadFields[resourceName]
-          ? resourcesUploadFields[resourceName]
-            .map(field => upload(field, params.data, itemId, resourceName, resourcesPaths[resourceName]))
-          : []
-        const currentData = resourcesData[resourceName][itemId] || {}
-        const uploadResults = await Promise.all(uploads)
-        result = await save(itemId, params.data, currentData, resourceName, resourcesPaths[resourceName], firebaseSaveFilter, uploadResults, type === CREATE, timestampFieldNames)
+
+        let id = methods.getId(params, resourcesData[resourceName], type, resourcesPaths[resourceName]);
+        params.__id = id;
+        // const uploads = resourcesUploadFields[resourceName]
+        //   ? resourcesUploadFields[resourceName]
+        //     .map(field => upload(field, params.data, itemId, resourceName, resourcesPaths[resourceName]))
+        //   : []
+
+        const uploadResults = null; // await Promise.all(uploads)
+        result = await methods.save(params, resourceName, type, resourcesPaths[resourceName], globalMethods.preSave, uploadResults, timestampFieldNames);
         return result
 
       default:
