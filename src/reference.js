@@ -1,1 +1,1 @@
-export * from 'admin-on-rest'
+export * from "admin-on-rest";
