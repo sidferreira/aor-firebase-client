@@ -42,22 +42,17 @@ const initializeResource = async ({name, isPublic}, initialQueryTimeout) => {
     await subscribeResource(ref, name);
   } else {
     firebase.auth().onAuthStateChanged(auth => {
-      if (auth) {
-        subscribeResource(ref, name)
-      }
+      if (auth) { subscribeResource(ref, name) }
     })
   }
 
-  await new Promise(r => {
-    setTimeout(r, initialQueryTimeout);
-  })
+  await new Promise(r => setTimeout(r, initialQueryTimeout));
 }
 
 const sanitizeResource = (resource, index) => {
   if (typeof resource === 'string') {
     resource = {
-      name: resource,
-      isPublic: true
+      name: resource
     }
   }
 
@@ -87,7 +82,6 @@ const subscribeResource = async (ref, name, resolve) => {
 
   ref.orderByKey().startAt(lastId).on('child_added', childSnapshot => {
     const id = childSnapshot.key;
-    console.log(`child_added`, id);
     resourcesData[name][id] = globalMethods.postRead({...childSnapshot.val(), id}, id, name);
   });
 
@@ -98,7 +92,6 @@ const subscribeResource = async (ref, name, resolve) => {
 
   ref.on('child_removed', oldChildSnapshot => {
     const id = oldChildSnapshot.key;
-    console.log(`child_removed`, id);
     delete resourcesData[name][id];
   });
 };
@@ -134,8 +127,8 @@ export default ({firebaseConfig, trackedResources, options}) => {
 
   return async (type, resourceName, params) => {
     await resourcesStatus[resourceName];
-    let result = null
-    console.log(`${resourceName} => ${type}`);
+    let result = null;
+
     switch (type) {
       case GET_LIST:
       case GET_MANY:
