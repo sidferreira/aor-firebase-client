@@ -1,5 +1,5 @@
-import RestClient from './restClient'
-import AuthClient from './authClient'
-import * as AorFirebaseMethods from './methods'
+import * as AorFirebaseMethods from "./methods";
+import AuthClient from "./authClient";
+import RestClient from "./restClient";
 
-export { RestClient, AuthClient, AorFirebaseMethods }
+export { AorFirebaseMethods, AuthClient, RestClient };

@@ -1,10 +1,16 @@
 {
-  "presets": [["es2015", { "modules": false }], "stage-3"],
-  "plugins": [
-    "transform-object-rest-spread",
-    ["transform-runtime", {
-      "polyfill": false,
-      "regenerator": true
+  "presets": [
+    ["@babel/preset-env", {
+      "targets": {
+        "chrome": 50,
+        "ie": 10
+      },
+      "include": [
+        "es6.object.assign",
+        "transform-spread",
+        "transform-parameters",
+        "proposal-object-rest-spread"
+      ]
     }]
   ]
 }

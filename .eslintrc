@@ -1,3 +1,15 @@
 {
-  "extends": ["standard", "standard-jsx"]
+  "parser": "babel-eslint",
+  "extends": [
+    "prettier",
+    "prettier/react",
+    "eslint:recommended",
+    "plugin:react/recommended"
+  ],
+  "rules": {
+  },
+  "env": {
+    "es6": true,
+    "node": true
+  }
 }

@@ -1,72 +1,72 @@
 /* globals localStorage */
-import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from './reference'
-import firebase from 'firebase'
+import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_CHECK } from "./reference";
+import firebase from "firebase/app";
+import "firebase/database";
+import "firebase/auth";
 
 const baseConfig = {
-  userProfilePath: '/users/',
-  userAdminProp: 'isAdmin',
-  localStorageTokenName: 'aorFirebaseClientToken',
+  userProfilePath: "/users/",
+  userAdminProp: "isAdmin",
+  localStorageTokenName: "aorFirebaseClientToken",
   handleAuthStateChange: async (auth, config) => {
-    console.log(`auth`, auth)
     if (auth) {
-      const snapshot = await firebase.database().ref(config.userProfilePath + auth.uid).once('value')
-      const profile = snapshot.val()
+      const user = auth.user;
+      const snapshot = await firebase
+        .database()
+        .ref(config.userProfilePath + user.uid)
+        .once("value");
+      const profile = snapshot.val();
 
       if (profile && profile[config.userAdminProp]) {
-        const firebaseToken = auth.getIdToken()
-        let user = { auth, profile, firebaseToken }
-        localStorage.setItem(config.localStorageTokenName, firebaseToken)
-        return user
+        //        const firebaseToken = await user.getIdToken()
+        //        let user = { auth, profile, firebaseToken }
+        //        localStorage.setItem(config.localStorageTokenName, firebaseToken)
+        return user;
       } else {
-        firebase.auth().signOut()
-        localStorage.removeItem(config.localStorageTokenName)
-        throw new Error('sign_in_error')
+        firebase.auth().signOut();
       }
-    } else {
-      localStorage.removeItem(config.localStorageTokenName)
-      throw new Error('sign_in_error')
     }
+    localStorage.removeItem(config.localStorageTokenName);
+    //      throw new Error('sign_in_error');
+    return false;
   }
-}
+};
 
 export default (config = {}) => {
-  config = {...baseConfig, ...config}
+  config = { ...baseConfig, ...config };
 
-  const firebaseLoaded = () => new Promise(resolve => {
-    firebase.auth().onAuthStateChanged(resolve)
-  })
+  if (firebase.apps.length === 0) {
+    firebase.initializeApp(config.firebaseConfig);
+    firebase.auth().setPersistence(config.firebasePersistence);
+  }
+
+  if (firebase.auth().currentUser) {
+    firebase.auth().currentUser.reload();
+  }
 
   return async (type, params) => {
     if (type === AUTH_LOGOUT) {
-      config.handleAuthStateChange(null, config).catch(() => { })
-      return firebase.auth().signOut()
-    }
-
-    if (firebase.auth().currentUser) {
-      await firebase.auth().currentUser.reload()
+      config.handleAuthStateChange(null, config).catch(() => {});
+      return firebase.auth().signOut();
     }
 
     if (type === AUTH_CHECK) {
-      await firebaseLoaded()
-
-      if (!firebase.auth().currentUser) {
-        throw new Error('sign_in_error')
+      await new Promise(r => firebase.auth().onAuthStateChanged(r));
+      if (firebase.auth().currentUser) {
+        await firebase.auth().currentUser.reload();
       }
 
-      return true
+      return !!firebase.auth().currentUser;
     }
 
     if (type === AUTH_LOGIN) {
-      const { username, password, alreadySignedIn } = params
-      let auth = firebase.auth().currentUser
-
-      if (!auth || !alreadySignedIn) {
-        auth = await firebase.auth().signInWithEmailAndPassword(username, password)
-      }
-
-      return config.handleAuthStateChange(auth, config)
+      const { username, password } = params;
+      const auth = await firebase
+        .auth()
+        .signInWithEmailAndPassword(username, password);
+      return config.handleAuthStateChange(auth, config);
     }
 
-    return false
-  }
-}
+    return false;
+  };
+};

@@ -1,11 +1,12 @@
 {
   "name": "demo",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "dependencies": {
-    "admin-on-rest": "^1.2.1",
-    "react": "^15.6.1",
-    "react-dom": "^15.6.1"
+    "admin-on-rest": "^1",
+    "aor-firebase-client": "^0.4",
+    "react": "^15",
+    "react-dom": "^15"
   },
   "devDependencies": {
     "react-scripts": "1.0.10"
@@ -15,5 +16,11 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
-  }
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
 }
