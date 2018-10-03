@@ -115,7 +115,7 @@ const subscribeResource = async (ref, name) => {
   });
 };
 
-export default ({ firebaseConfig, trackedResources, options }) => {
+export default (firebaseConfig = {}, { trackedResources, options }) => {
   options = Object.assign({}, BaseConfiguration, options || {});
   const { timestampFieldNames, initialQueryTimeout } = options;
 

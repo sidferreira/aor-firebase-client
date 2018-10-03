@@ -4,12 +4,12 @@ import sortBy from "sort-by";
 
 import {
   GET_LIST,
-  GET_ONE,
+  // GET_ONE,
   GET_MANY,
-  GET_MANY_REFERENCE,
+  // GET_MANY_REFERENCE,
   CREATE,
-  UPDATE,
-  DELETE
+  // UPDATE,
+  // DELETE
 } from "admin-on-rest";
 
 const getMany = async (params, resourceData, type) => {

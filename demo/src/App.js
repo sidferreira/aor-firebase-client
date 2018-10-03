@@ -21,7 +21,6 @@ const authClientOptions = {
 };
 
 const restClientOptions = {
-  firebaseConfig, // Needed, to ensure everything is properly configured
   trackedResources: [
     {
       name: "posts", // The display/reference name for this resource
@@ -62,7 +61,7 @@ const shouldUseAuth = true; // !(window && window.location && window.location.se
 
 const App = () => (
   <Admin
-    restClient={RestClient(restClientOptions)}
+    restClient={RestClient(firebaseConfig, restClientOptions)}
     authClient={shouldUseAuth ? AuthClient(authClientOptions) : null}
   >
     <Resource
