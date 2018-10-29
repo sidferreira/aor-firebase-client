@@ -35,16 +35,16 @@ const clientOptions = {
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   },
-  trackedResources: [{
+  firebaseConfig: [{
     name: 'posts', // The name reference to be used in all other places in AOR
     path: 'blog', // The path in the database. If missing will use the name
-    public: true,
+    isPublic: true,
     uploadFields: [] // The string name of the field
   }, 'contacts'] // A single string assumes path and name as equal, non private and without upload fields
 }
 
 const App = () => (
-    <Admin restClient={RestClient(trackedResources, clientOptions)} >
+    <Admin restClient={RestClient(firebaseConfig, clientOptions)} >
         <Resource name="posts" list={PostList} />
         <Resource name="contacts" list={ContactList} />
     </Admin>
